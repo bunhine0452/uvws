@@ -1,7 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
+import { open as openDialog, ask, message } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { 
   Globe, Copy, Square, Play, Clock, Box, FileCode, Settings, Wrench, 
@@ -60,6 +62,32 @@ export default function App() {
   const [setupPythonVer, setSetupPythonVer] = useState("3.12");
   const [setupInstallReqs, setSetupInstallReqs] = useState(true);
   const [isSettingUp, setIsSettingUp] = useState(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+
+  const checkForUpdates = async () => {
+    try {
+      setIsCheckingUpdate(true);
+      const update = await check();
+      
+      if (update) {
+        const yes = await ask(`새로운 버전(${update.version})이 출시되었습니다!\n\n${update.body || ""}\n\n지금 업데이트를 다운로드하고 설치하시겠습니까? (앱이 재시작됩니다)`, {
+          title: '업데이트 가능',
+          kind: 'info',
+        });
+        
+        if (yes) {
+          await update.downloadAndInstall();
+          await relaunch();
+        }
+      } else {
+        await message('현재 최신 버전을 사용 중입니다.', { title: '업데이트 없음', kind: 'info' });
+      }
+    } catch (error) {
+      await message(`업데이트 확인 중 오류가 발생했습니다: ${error}`, { title: '오류', kind: 'error' });
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
 
   // Global port map: projectId -> port
   const [projectPorts, setProjectPorts] = useState<Record<string, number>>({});
@@ -852,10 +880,21 @@ export default function App() {
             <img src="/icons/128x128.png" alt="uvws icon" width="56" height="56" style={{ marginBottom: 24, borderRadius: 16, display: 'block', margin: '0 auto 24px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }} />
             <h2 style={{ margin: '0 0 6px 0', color: 'var(--text-primary)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px' }}>uvws</h2>
             <p style={{ margin: '0 0 6px 0', color: 'var(--text-tertiary)', fontSize: 12, fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' as const }}>Version 0.1.0 · Beta</p>
-            <p style={{ lineHeight: 1.7, color: 'var(--text-secondary)', fontSize: 13, margin: '16px 0 32px', maxWidth: 340, marginLeft: 'auto', marginRight: 'auto' }}>
+            <p style={{ lineHeight: 1.7, color: 'var(--text-secondary)', fontSize: 13, margin: '16px 0 24px', maxWidth: 340, marginLeft: 'auto', marginRight: 'auto' }}>
               A modern Python workspace manager powered by Tauri and uv. Manage, monitor, and run your projects with ease.
             </p>
-            <button className="btn-primary" onClick={() => setShowAbout(false)} style={{ width: '100%' }}>Close</button>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
+              <button 
+                className="btn-secondary" 
+                onClick={checkForUpdates} 
+                disabled={isCheckingUpdate}
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                {isCheckingUpdate ? "업데이트 확인 중..." : "업데이트 확인"}
+              </button>
+              <button className="btn-primary" onClick={() => setShowAbout(false)} style={{ width: '100%' }}>닫기</button>
+            </div>
           </div>
         </div>
       )}

@@ -43,3 +43,7 @@ test_runner.py
 .oculpm/oculpm.log
 .oculpm.backup-*/
 # oculpm:end
+
+# Tauri Updater Keys
+src-tauri/updater.key
+src-tauri/updater.key.pub
