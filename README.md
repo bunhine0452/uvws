@@ -118,16 +118,18 @@ Go to the [**Releases**](https://github.com/bunhine0452/uvws/releases) page and 
 
 ### ⚠️ macOS — First Launch
 
-macOS Gatekeeper may block the app with *"uvws is damaged and can't be opened"* because it is not code-signed with an Apple Developer ID. To fix this:
+macOS may show a security warning because the app is not notarized with Apple. To open it:
 
-```bash
-# After mounting the .dmg and dragging uvws.app to /Applications:
-xattr -cr /Applications/uvws.app
-```
+1. **Right-click** (or Control-click) the app
+2. Click **Open** from the menu
+3. Click **Open** again in the dialog
 
-Then open the app normally. You only need to do this **once**.
+You only need to do this **once**. After that, it opens normally with double-click.
 
-> **Alternative**: Right-click the app → Open → Click "Open" in the dialog.
+> **If you still see "damaged" error**, run in Terminal:
+> ```bash
+> xattr -cr /Applications/uvws.app
+> ```
 
 ### Prerequisites
 

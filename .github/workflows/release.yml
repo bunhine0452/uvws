@@ -68,11 +68,14 @@ jobs:
             | macOS (Intel) | `.dmg` (x64) |
             | Windows | `.msi` / `.exe` |
 
-            ### What's New
-            - See [CHANGELOG](https://github.com/bunhine0452/uvws/blob/main/CHANGELOG.md) for details.
+            ### ⚠️ macOS First Launch
+            macOS may show a security warning because the app is not notarized.
+            **Right-click** the app → **Open** → Click **Open** in the dialog.
+            You only need to do this once.
 
             ### Prerequisites
             - [uv](https://docs.astral.sh/uv/) must be installed on your system.
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
