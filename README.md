@@ -116,6 +116,19 @@ Go to the [**Releases**](https://github.com/bunhine0452/uvws/releases) page and 
 | **macOS** | `uvws_x.x.x_x64.dmg` | Intel Mac |
 | **Windows** | `uvws_x.x.x_x64-setup.exe` | 64-bit Windows 10+ |
 
+### ⚠️ macOS — First Launch
+
+macOS Gatekeeper may block the app with *"uvws is damaged and can't be opened"* because it is not code-signed with an Apple Developer ID. To fix this:
+
+```bash
+# After mounting the .dmg and dragging uvws.app to /Applications:
+xattr -cr /Applications/uvws.app
+```
+
+Then open the app normally. You only need to do this **once**.
+
+> **Alternative**: Right-click the app → Open → Click "Open" in the dialog.
+
 ### Prerequisites
 
 - [**uv**](https://docs.astral.sh/uv/getting-started/installation/) must be installed on your system:
