@@ -5,7 +5,7 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { 
   Globe, Copy, Square, Play, Clock, Box, FileCode, Settings, Wrench, 
-  PackageSearch, FolderOpen, X, RefreshCw, DownloadCloud, FileText, Zap, Terminal
+  PackageSearch, FolderOpen, X, RefreshCw, DownloadCloud, FileText, Zap
 } from "lucide-react";
 import TerminalView from "./components/TerminalView";
 import "./App.css";
