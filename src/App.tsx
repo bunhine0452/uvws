@@ -81,7 +81,7 @@ export default function App() {
 
   // New States for About & Smart Import
   const [showAbout, setShowAbout] = useState(false);
-  const [appVersion, setAppVersion] = useState("0.2.0");
+  const [appVersion, setAppVersion] = useState("0.2.1");
   const [setupModalConfig, setSetupModalConfig] = useState<{project: Project, hasReqs: boolean} | null>(null);
   const [setupPythonVer, setSetupPythonVer] = useState("3.12");
   const [setupInstallReqs, setSetupInstallReqs] = useState(true);
