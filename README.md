@@ -1,11 +1,10 @@
 <p align="center">
-  <img src="src-tauri/icons/128x128@2x.png" width="120" alt="uvws icon" />
+  <img src="src-tauri/icons/128x128@2x.png" width="100" alt="uvws icon" />
 </p>
 
 <h1 align="center">uvws</h1>
 <p align="center">
-  <strong>The Modern Python Workspace Manager</strong><br/>
-  <sub>Register, configure, and launch all your Python projects from a single beautiful desktop app.</sub>
+  Python 프로젝트를 한 곳에서 관리하는 데스크탑 앱 — <code>uv</code> 기반
 </p>
 
 <p align="center">
@@ -18,196 +17,112 @@
 
 ---
 
-## ✨ Why uvws?
-
-Managing multiple Python projects — each with its own virtual environment, dependencies, and startup scripts — shouldn't be painful. **uvws** brings order to the chaos with a native desktop app that feels like a modern IDE's project dashboard.
-
-| Pain Point | uvws Solution |
-|---|---|
-| 😩 `cd project && source .venv/bin/activate && python main.py` | **One-click Run** with automatic `uv run` orchestration |
-| 😩 Setting up venvs & installing deps manually | **Smart Import Wizard** — auto-detects and initializes `.venv` |
-| 😩 Juggling terminal windows for each project | **Built-in Terminal** with real-time log streaming |
-| 😩 "What port is this running on again?" | **Auto Port Detection** — opens browser instantly |
-| 😩 Zombie processes hogging ports | **Kill Port** — one click to free occupied ports |
-
----
-
-## 🖼️ Preview
+Python 프로젝트가 여러 개라면, 매번 `cd`하고 `source .venv/bin/activate`하고 `python main.py`를 치는 게 슬슬 귀찮아지는 시점이 옵니다. uvws는 그 과정을 클릭 한 번으로 줄여줍니다.
 
 <p align="center">
   <img src="docs/alpha/preview.png" width="720" alt="uvws screenshot" />
 </p>
 
-> A sleek, minimal interface designed for focus. Dark by default. Zero distractions.
-
 ---
 
-## 🚀 Features
+## 다운로드
 
-### 📦 Project Management
-- **Register** any Python project by browsing to its directory
-- **Configure** entry commands, Python interpreter paths, and environment variables inline
-- **Persistent storage** — your project list survives restarts
+[**Releases 페이지**](https://github.com/bunhine0452/uvws/releases)에서 바로 받을 수 있습니다.
 
-### ⚡ One-Click Execution
-- Wraps every run with `uv run` for seamless virtual environment management
-- Auto-creates `.venv` and installs dependencies on first run
-- Real-time **stdout/stderr** streaming in an embedded xterm.js terminal
-
-### 🔍 Smart Import Wizard
-- Detects existing `requirements.txt` or `pyproject.toml`
-- Choose your Python version (3.10 – 3.13)
-- Initialize `.venv` and install deps in one step
-
-### 🌐 Port & Process Control
-- **Auto-detects** listening ports from log output (`localhost:XXXX`)
-- **Open in Browser** button appears when a port is detected
-- **Kill Port** — find and terminate processes occupying any port
-
-### 📋 Dependency Inspector
-- View all installed packages in `.venv` with version info
-- **Sync Now** — re-install from `requirements.txt` / `pyproject.toml`
-- Powered by `uv pip list --format json`
-
----
-
-## 🏗️ Architecture
-
-```
-uvws
-├── Frontend (React 19 + TypeScript)
-│   ├── App.tsx          — Main workspace UI
-│   ├── TerminalView     — xterm.js terminal component
-│   └── Vite 7           — Dev server & bundler
-│
-├── Backend (Rust + Tauri 2)
-│   ├── runner.rs        — Process lifecycle management
-│   ├── config.rs        — JSON-based project persistence
-│   ├── uv.rs            — uv CLI integration layer
-│   └── lib.rs           — Tauri command handlers
-│
-└── Platform
-    ├── macOS             — .dmg / .app bundle
-    └── Windows           — .msi / .exe installer (via CI)
-```
-
-**Tech Stack:**
-
-| Layer | Technology |
+| 플랫폼 | 파일 |
 |---|---|
-| Runtime | [Tauri 2](https://tauri.app) (Rust + WebView) |
-| Frontend | React 19, TypeScript, Vite 7 |
-| Terminal | [xterm.js](https://xtermjs.org) |
-| Icons | [Lucide React](https://lucide.dev) |
-| Package Manager | [uv](https://docs.astral.sh/uv/) by Astral |
-| Process Mgmt | `tokio` async runtime |
+| macOS Apple Silicon (M1~M4) | `uvws_x.x.x_aarch64.dmg` |
+| macOS Intel | `uvws_x.x.x_x64.dmg` |
+| Windows 10+ | `uvws_x.x.x_x64-setup.exe` |
+
+**선행 조건:** [uv](https://docs.astral.sh/uv/getting-started/installation/)가 설치되어 있어야 합니다.
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+### macOS 첫 실행 시 보안 경고
+
+앱이 Apple 공증을 받지 않았기 때문에 경고가 뜰 수 있습니다.
+
+- **"손상된 앱" 오류**: 터미널에서 `xattr -cr /Applications/uvws.app` 실행 후 재시도
+- **일반 경고**: 앱을 우클릭 → Open → Open 확인
+
+한 번만 하면 그 다음부터는 정상 실행됩니다.
 
 ---
 
-## 📥 Installation
+## 주요 기능
 
-### Download
+**프로젝트 등록 & 실행**
+폴더를 등록하면 이후 클릭 한 번으로 실행됩니다. `uv run`으로 자동 래핑되어 가상환경 없이도 바로 동작하고, `.venv`가 없으면 첫 실행 시 자동으로 만들어줍니다.
 
-Go to the [**Releases**](https://github.com/bunhine0452/uvws/releases) page and download the latest version for your OS:
+**임포트 위저드**
+`requirements.txt`나 `pyproject.toml`이 있는 폴더를 가져올 때 Python 버전(3.10–3.13)을 선택하고 의존성 설치까지 한 번에 처리합니다.
 
-| Platform | File | Notes |
-|---|---|---|
-| **macOS** | `uvws_x.x.x_aarch64.dmg` | Apple Silicon (M1/M2/M3/M4) |
-| **macOS** | `uvws_x.x.x_x64.dmg` | Intel Mac |
-| **Windows** | `uvws_x.x.x_x64-setup.exe` | 64-bit Windows 10+ |
+**내장 터미널**
+각 프로젝트의 stdout/stderr가 xterm.js 터미널로 실시간 스트리밍됩니다. 로그에서 `localhost:XXXX` 형태의 주소가 감지되면 브라우저 열기 버튼이 자동으로 나타납니다.
 
-### ⚠️ macOS — First Launch
+**포트 관리 (강제 종료)**
+특정 포트를 점유한 프로세스를 무조건 강제(SIGKILL)로 종료합니다. 포트가 실제로 비워질 때까지 재시도·검증하므로 "포트가 이미 사용 중" 에러에 더 이상 `lsof -i`를 칠 필요가 없습니다.
 
-macOS may show a security warning because the app is not notarized with Apple. To open it:
+**동시 실행 & 자동 정리**
+여러 프로젝트의 localhost 서버를 동시에 띄울 수 있고, 각 프로젝트는 독립된 터미널·포트로 관리됩니다. 앱을 종료하면 실행 중이던 서버가 모두 함께 정리되고, 비정상 종료 시에도 다음 실행에서 남은 서버를 자동으로 청소합니다.
 
-1. **Right-click** (or Control-click) the app
-2. Click **Open** from the menu
-3. Click **Open** again in the dialog
+**Git 통합**
+프로젝트 폴더가 Git 저장소라면 브랜치·ahead/behind·변경 파일 수와 최근 커밋을 한눈에 보고, Fetch / Pull / Push를 버튼 한 번으로 실행할 수 있습니다.
 
-You only need to do this **once**. After that, it opens normally with double-click.
+**의존성 뷰어**
+`.venv`에 설치된 패키지 목록과 버전을 확인하고, Sync 버튼으로 `requirements.txt` / `pyproject.toml` 기준으로 재설치할 수 있습니다.
 
-> **If you still see "damaged" error**, run in Terminal:
-> ```bash
-> xattr -cr /Applications/uvws.app
-> ```
-
-### Prerequisites
-
-- [**uv**](https://docs.astral.sh/uv/getting-started/installation/) must be installed on your system:
-  ```bash
-  # macOS / Linux
-  curl -LsSf https://astral.sh/uv/install.sh | sh
-  
-  # Windows (PowerShell)
-  powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-  ```
+**한국어 / 영어**
+About 화면에서 언어를 즉시 전환할 수 있습니다.
 
 ---
 
-## 🛠️ Build from Source
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org) 18+
-- [pnpm](https://pnpm.io) (recommended) or npm
-- [Rust](https://rustup.rs) toolchain (stable)
-- [uv](https://docs.astral.sh/uv/)
-- Platform-specific Tauri prerequisites — see [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/)
-
-### Development
+## 소스 빌드
 
 ```bash
 git clone https://github.com/bunhine0452/uvws.git
 cd uvws
-
-pnpm install          # Install frontend dependencies
-pnpm tauri dev        # Start in development mode
+pnpm install
+pnpm tauri dev       # 개발 모드
+pnpm tauri build     # 릴리스 빌드
 ```
 
-### Production Build
+빌드 결과물은 `src-tauri/target/release/bundle/`에 생성됩니다.
 
-```bash
-pnpm tauri build      # Build release binaries
-```
-
-Build artifacts are in `src-tauri/target/release/bundle/`.
+**필요 환경:** Node.js 18+, pnpm, Rust stable, uv, [Tauri 사전 조건](https://v2.tauri.app/start/prerequisites/)
 
 ---
 
-## 🗺️ Roadmap
+## 로드맵
 
-- [x] Core project management (register, configure, delete)
-- [x] One-click run with `uv run` orchestration
-- [x] Real-time terminal with xterm.js
-- [x] Auto port detection & browser open
-- [x] Kill port functionality
-- [x] Smart Import Wizard with Python version selection
-- [x] Dependency inspector & sync
-- [ ] Git integration (status, pull, push from UI)
-- [ ] Multi-language support (English / Korean)
-- [ ] Plugin system for custom workflows
-- [ ] Docker container management
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feat/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feat/amazing-feature`)
-5. Open a Pull Request
+- [x] 프로젝트 등록/설정/삭제
+- [x] uv run 기반 원클릭 실행
+- [x] xterm.js 실시간 터미널
+- [x] 포트 자동 감지 & 브라우저 열기
+- [x] Kill Port
+- [x] 임포트 위저드 (Python 버전 선택 포함)
+- [x] 의존성 뷰어 & Sync
+- [x] 동시 다중 실행 & 앱 종료 시 자동 서버 정리
+- [x] Git 통합 (status, fetch, pull, push)
+- [x] 다국어 지원 (한국어 / 영어)
+- [ ] 플러그인 시스템
+- [ ] Docker 컨테이너 관리
 
 ---
 
-## 📄 License
+## 기여
 
-This project is licensed under the [MIT License](LICENSE).
+PR과 이슈 모두 환영합니다. 버그 리포트나 기능 제안은 [Issues](https://github.com/bunhine0452/uvws/issues)에 남겨주세요.
 
 ---
 
-<p align="center">
-  Built with ❤️ using <a href="https://tauri.app">Tauri</a> and <a href="https://docs.astral.sh/uv/">uv</a>
-</p>
+## 라이선스
+
+[MIT License](LICENSE)

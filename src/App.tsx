@@ -1,15 +1,18 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getVersion } from "@tauri-apps/api/app";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { open as openDialog, ask, message } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { 
-  Globe, Copy, Square, Play, Clock, Box, FileCode, Settings, Wrench, 
-  PackageSearch, FolderOpen, X, RefreshCw, DownloadCloud, FileText, Zap
+import {
+  Globe, Copy, Square, Play, Clock, Box, FileCode, Settings, Wrench,
+  PackageSearch, FolderOpen, X, RefreshCw, DownloadCloud, FileText, Zap,
+  GitBranch, ArrowUp, ArrowDown, Download, Upload, Languages, History
 } from "lucide-react";
 import TerminalView from "./components/TerminalView";
+import { useI18n } from "./i18n";
 import "./App.css";
 
 interface Project {
@@ -23,6 +26,25 @@ interface Project {
   python_path?: string;
   icon_color?: string;
   port?: number;
+}
+
+interface GitStatus {
+  is_repo: boolean;
+  branch: string;
+  ahead: number;
+  behind: number;
+  staged: number;
+  modified: number;
+  untracked: number;
+  has_remote: boolean;
+  has_upstream: boolean;
+}
+
+interface GitCommit {
+  hash: string;
+  message: string;
+  author: string;
+  date: string;
 }
 
 const ICON_COLORS = [
@@ -45,9 +67,10 @@ function shortenPath(p: string): string {
   return shortened;
 }
 
-type TabId = "config" | "env" | "deps";
+type TabId = "config" | "env" | "deps" | "git";
 
 export default function App() {
+  const { t, lang, setLang } = useI18n();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("config");
@@ -55,35 +78,50 @@ export default function App() {
   const [hasVenv, setHasVenv] = useState<boolean>(false);
   const [uptime, setUptime] = useState<number>(0);
   const uptimeRef = useRef<number | null>(null);
-  
+
   // New States for About & Smart Import
   const [showAbout, setShowAbout] = useState(false);
+  const [appVersion, setAppVersion] = useState("0.2.0");
   const [setupModalConfig, setSetupModalConfig] = useState<{project: Project, hasReqs: boolean} | null>(null);
   const [setupPythonVer, setSetupPythonVer] = useState("3.12");
   const [setupInstallReqs, setSetupInstallReqs] = useState(true);
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
 
+  // Git state
+  const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
+  const [gitCommits, setGitCommits] = useState<GitCommit[]>([]);
+  const [gitLoading, setGitLoading] = useState(false);
+  const [gitBusy, setGitBusy] = useState(false);
+
+  // Kill-port modal (manual entry when no port detected)
+  const [killPortModalOpen, setKillPortModalOpen] = useState(false);
+  const [killPortInput, setKillPortInput] = useState("");
+
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(() => {});
+  }, []);
+
   const checkForUpdates = async () => {
     try {
       setIsCheckingUpdate(true);
       const update = await check();
-      
+
       if (update) {
-        const yes = await ask(`새로운 버전(${update.version})이 출시되었습니다!\n\n${update.body || ""}\n\n지금 업데이트를 다운로드하고 설치하시겠습니까? (앱이 재시작됩니다)`, {
-          title: '업데이트 가능',
-          kind: 'info',
-        });
-        
+        const yes = await ask(
+          t("update_prompt", { v: update.version, body: update.body || "" }),
+          { title: t("update_available"), kind: "info" }
+        );
+
         if (yes) {
           await update.downloadAndInstall();
           await relaunch();
         }
       } else {
-        await message('현재 최신 버전을 사용 중입니다.', { title: '업데이트 없음', kind: 'info' });
+        await message(t("update_none"), { title: t("update_none_title"), kind: "info" });
       }
     } catch (error) {
-      await message(`업데이트 확인 중 오류가 발생했습니다: ${error}`, { title: '오류', kind: 'error' });
+      await message(t("update_error", { err: String(error) }), { title: t("error"), kind: "error" });
     } finally {
       setIsCheckingUpdate(false);
     }
@@ -157,6 +195,14 @@ export default function App() {
     }
   }, [selectedProjectId, projects]);
 
+  // Load Git status when the Git tab is active or the project changes
+  useEffect(() => {
+    const proj = projects.find((p) => p.id === selectedProjectId);
+    if (activeTab === "git" && proj) {
+      loadGit(proj.path);
+    }
+  }, [activeTab, selectedProjectId]);
+
   // Global Event Listeners
   useEffect(() => {
     const unsubStatus = listen<{ id: string; status: string }>("process-status", (e) => {
@@ -185,7 +231,7 @@ export default function App() {
     try {
       const list: Project[] = await invoke("get_projects");
       setProjects(list);
-      
+
       const ports: Record<string, number> = {};
       list.forEach(p => {
         if (p.port) ports[p.id] = p.port;
@@ -211,9 +257,41 @@ export default function App() {
     setLoadingPkgs(false);
   };
 
+  const loadGit = async (projectPath: string) => {
+    setGitLoading(true);
+    try {
+      const [status, commits] = await Promise.all([
+        invoke<GitStatus>("git_status", { path: projectPath }),
+        invoke<GitCommit[]>("git_log", { path: projectPath, limit: 10 }),
+      ]);
+      setGitStatus(status);
+      setGitCommits(status.is_repo ? commits : []);
+    } catch {
+      setGitStatus(null);
+      setGitCommits([]);
+    } finally {
+      setGitLoading(false);
+    }
+  };
+
+  const runGitAction = async (action: "git_fetch" | "git_pull" | "git_push") => {
+    const proj = projects.find((p) => p.id === selectedProjectId);
+    if (!proj) return;
+    setGitBusy(true);
+    try {
+      const result = await invoke<string>(action, { path: proj.path });
+      await message(result, { title: t("tab_git") });
+      await loadGit(proj.path);
+    } catch (err) {
+      await message(t("failed_generic", { err: String(err) }), { title: t("error"), kind: "error" });
+    } finally {
+      setGitBusy(false);
+    }
+  };
+
   const handleSelectFolder = async () => {
     try {
-      const selected = await openDialog({ directory: true, multiple: false, title: "Select Project Directory" });
+      const selected = await openDialog({ directory: true, multiple: false, title: t("project_path") });
       if (selected) {
         const pathStr = Array.isArray(selected) ? selected[0] : selected;
         setNewPath(pathStr);
@@ -232,7 +310,7 @@ export default function App() {
       const selected = await openDialog({
         directory: field === "path",
         multiple: false,
-        title: field === "path" ? "Select Working Directory" : "Select Python Interpreter",
+        title: field === "path" ? t("working_directory") : t("python_interpreter"),
       });
       if (selected) {
         const pathStr = Array.isArray(selected) ? selected[0] : selected;
@@ -286,8 +364,8 @@ export default function App() {
     };
 
     try {
-      const hasVenv: boolean = await invoke("check_venv_exists", { path: newPath });
-      if (!hasVenv) {
+      const venvExists: boolean = await invoke("check_venv_exists", { path: newPath });
+      if (!venvExists) {
         const hasReqs: boolean = await invoke("check_requirements_exists", { path: newPath });
         setSetupModalConfig({ project: newProject, hasReqs });
         setSetupInstallReqs(hasReqs);
@@ -296,7 +374,7 @@ export default function App() {
       }
       await finishAddProject(newProject);
     } catch (err) {
-      alert(`Failed to check environment: ${err}`);
+      await message(t("failed_check_env", { err: String(err) }), { title: t("error"), kind: "error" });
     }
   };
 
@@ -311,7 +389,7 @@ export default function App() {
       setNewGitUrl("");
       setNewRunCommand("");
     } catch (err) {
-      alert(`Failed to add project: ${err}`);
+      await message(t("failed_add_project", { err: String(err) }), { title: t("error"), kind: "error" });
     }
   };
 
@@ -319,28 +397,29 @@ export default function App() {
     if (!setupModalConfig) return;
     setIsSettingUp(true);
     try {
-      await invoke("setup_project_env", { 
-        path: setupModalConfig.project.path, 
-        pythonVersion: setupPythonVer, 
-        installReqs: setupInstallReqs 
+      await invoke("setup_project_env", {
+        path: setupModalConfig.project.path,
+        pythonVersion: setupPythonVer,
+        installReqs: setupInstallReqs
       });
       await finishAddProject(setupModalConfig.project);
       setSetupModalConfig(null);
     } catch (err) {
-      alert("Failed to setup environment: " + err);
+      await message(t("failed_setup_env", { err: String(err) }), { title: t("error"), kind: "error" });
     } finally {
       setIsSettingUp(false);
     }
   };
 
   const handleDeleteProject = async (id: string) => {
-    if (!confirm("Remove this project from uvws?")) return;
+    const ok = await ask(t("confirm_remove_project"), { title: t("remove_project"), kind: "warning" });
+    if (!ok) return;
     try {
       const list: Project[] = await invoke("delete_project", { id });
       setProjects(list);
       if (selectedProjectId === id) setSelectedProjectId(list.length > 0 ? list[0].id : null);
     } catch (err) {
-      alert(`Failed: ${err}`);
+      await message(t("failed_generic", { err: String(err) }), { title: t("error"), kind: "error" });
     }
   };
 
@@ -360,7 +439,7 @@ export default function App() {
       });
     } catch (err) {
       setProjects((prev) => prev.map((p) => (p.id === selectedProjectId ? { ...p, status: "Stopped" } : p)));
-      alert(`Failed to start: ${err}`);
+      await message(t("failed_start", { err: String(err) }), { title: t("error"), kind: "error" });
     }
   };
 
@@ -369,7 +448,7 @@ export default function App() {
     try {
       await invoke("stop_project", { id: selectedProjectId });
     } catch (err) {
-      alert(`Failed to stop: ${err}`);
+      await message(t("failed_stop", { err: String(err) }), { title: t("error"), kind: "error" });
     }
   };
 
@@ -382,7 +461,7 @@ export default function App() {
       await invoke("sync_project_dependencies", { id: proj.id, path: proj.path });
     } catch (err) {
       setProjects((prev) => prev.map((p) => (p.id === selectedProjectId ? { ...p, status: "Stopped" } : p)));
-      alert(`Failed: ${err}`);
+      await message(t("failed_generic", { err: String(err) }), { title: t("error"), kind: "error" });
     }
   };
 
@@ -395,21 +474,12 @@ export default function App() {
     }
   };
 
-  const handleKillPort = async () => {
-    let portToKill = detectedPort;
-    if (!portToKill) {
-      const input = prompt("Enter port number to kill:");
-      if (!input) return;
-      portToKill = parseInt(input, 10);
-      if (isNaN(portToKill) || portToKill <= 0 || portToKill > 65535) {
-        alert("Invalid port number");
-        return;
-      }
-    }
-    if (!confirm(`Kill all processes on port ${portToKill}?`)) return;
+  const confirmAndKill = async (port: number) => {
+    const ok = await ask(t("confirm_kill_port", { port }), { title: t("kill_port"), kind: "warning" });
+    if (!ok) return;
     try {
-      const result = await invoke<string>("kill_port", { port: portToKill });
-      alert(result);
+      const result = await invoke<string>("kill_port", { port });
+      await message(result, { title: t("kill_port") });
       if (selectedProjectId) {
         setProjectPorts((prev) => {
           const next = { ...prev };
@@ -418,8 +488,27 @@ export default function App() {
         });
       }
     } catch (err) {
-      alert(`Failed: ${err}`);
+      await message(t("failed_generic", { err: String(err) }), { title: t("error"), kind: "error" });
     }
+  };
+
+  const handleKillPort = async () => {
+    if (detectedPort) {
+      await confirmAndKill(detectedPort);
+    } else {
+      setKillPortInput("");
+      setKillPortModalOpen(true);
+    }
+  };
+
+  const submitKillPortModal = async () => {
+    const port = parseInt(killPortInput, 10);
+    if (isNaN(port) || port <= 0 || port > 65535) {
+      await message(t("invalid_port"), { title: t("error"), kind: "error" });
+      return;
+    }
+    setKillPortModalOpen(false);
+    await confirmAndKill(port);
   };
 
   const handleCopyLog = () => {
@@ -431,6 +520,8 @@ export default function App() {
     if (s < 3600) return `${Math.floor(s / 60)}m ${s % 60}s`;
     return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
   };
+
+  const statusLabel = (s: string): string => t(`status_${s.toLowerCase()}`);
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
   const status = selectedProject?.status || "Stopped";
@@ -447,11 +538,11 @@ export default function App() {
           <img src="/icons/128x128.png" alt="uvws icon" width="34" height="34" style={{ borderRadius: 'var(--radius-md)', flexShrink: 0, boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }} />
           <div className="sidebar-brand-text">
             <h2>uvws</h2>
-            <span>Python Workspace</span>
+            <span>{t("workspace_subtitle")}</span>
           </div>
         </div>
 
-        <div className="sidebar-section">Projects</div>
+        <div className="sidebar-section">{t("projects")}</div>
 
         <ul className="project-list">
           {projects.map((p, idx) => (
@@ -471,7 +562,7 @@ export default function App() {
               <button
                 className="project-delete-btn"
                 onClick={(e) => { e.stopPropagation(); handleDeleteProject(p.id); }}
-                title="Remove project"
+                title={t("remove_project")}
               ><X size={14} /></button>
             </li>
           ))}
@@ -479,7 +570,7 @@ export default function App() {
 
         <div className="sidebar-bottom">
           <button className="btn-add" onClick={() => setShowAddModal(true)}>
-            + Add Project
+            {t("add_project")}
           </button>
         </div>
       </aside>
@@ -500,7 +591,7 @@ export default function App() {
                   <h1>{selectedProject.name}</h1>
                   <span className={`status-indicator ${status.toLowerCase()}`}>
                     <span className="status-indicator-dot" />
-                    {status}
+                    {statusLabel(status)}
                   </span>
                 </div>
                 <div className="project-header-path">{selectedProject.path}</div>
@@ -510,27 +601,27 @@ export default function App() {
                   className={`header-action-btn port-badge ${detectedPort && isRunning ? "active" : ""}`}
                   onClick={handleOpenBrowser}
                   disabled={!detectedPort || !isRunning}
-                  title="Open in Browser"
+                  title={t("open_in_browser")}
                 >
-                  <Globe size={14} /> {detectedPort && isRunning ? `:${detectedPort}` : "No Port"}
+                  <Globe size={14} /> {detectedPort && isRunning ? `:${detectedPort}` : t("no_port")}
                 </button>
                 <button
                   className="header-action-btn kill-port-btn"
                   onClick={handleKillPort}
-                  title={detectedPort ? `Kill port ${detectedPort}` : "Kill port"}
+                  title={detectedPort ? t("kill_port_title", { port: detectedPort }) : t("kill_port")}
                 >
-                  <Zap size={13} /> Kill Port
+                  <Zap size={13} /> {t("kill_port")}
                 </button>
                 <button className="header-action-btn copy-btn" onClick={handleCopyLog}>
-                  <Copy size={14} /> Copy Log
+                  <Copy size={14} /> {t("copy_log")}
                 </button>
                 {isRunning ? (
                   <button className="header-action-btn stop-btn" onClick={handleStop} disabled={isInstalling}>
-                    <Square size={12} fill="currentColor" /> Stop
+                    <Square size={12} fill="currentColor" /> {t("stop")}
                   </button>
                 ) : (
                   <button className="header-action-btn run-btn" onClick={handleRun} disabled={isInstalling}>
-                    <Play size={12} fill="currentColor" /> Run
+                    <Play size={12} fill="currentColor" /> {t("run")}
                   </button>
                 )}
               </div>
@@ -539,28 +630,31 @@ export default function App() {
             <div className="stats-bar">
               <div className="stat-chip">
                 <span className="stat-chip-icon"><Clock size={13} /></span>
-                Uptime {isRunning ? formatUptime(uptime) : "—"}
+                {t("uptime")} {isRunning ? formatUptime(uptime) : "—"}
               </div>
               <div className="stat-chip">
                 <span className="stat-chip-icon"><Box size={13} /></span>
-                Env
+                {t("env")}
                 {hasVenv ? <span className="badge">uv</span> : " —"}
               </div>
               <div className="stat-chip">
                 <span className="stat-chip-icon"><FileCode size={13} /></span>
-                Python {pythonVersion || "—"}
+                {t("python")} {pythonVersion || "—"}
               </div>
             </div>
 
             <div className="tabs-bar">
               <button className={`tab-btn ${activeTab === "config" ? "active" : ""}`} onClick={() => setActiveTab("config")}>
-                <span className="tab-icon"><Settings size={14} /></span> Configuration
+                <span className="tab-icon"><Settings size={14} /></span> {t("tab_config")}
               </button>
               <button className={`tab-btn ${activeTab === "env" ? "active" : ""}`} onClick={() => setActiveTab("env")}>
-                <span className="tab-icon"><Wrench size={14} /></span> Environment
+                <span className="tab-icon"><Wrench size={14} /></span> {t("tab_env")}
               </button>
               <button className={`tab-btn ${activeTab === "deps" ? "active" : ""}`} onClick={() => setActiveTab("deps")}>
-                <span className="tab-icon"><PackageSearch size={14} /></span> Dependencies
+                <span className="tab-icon"><PackageSearch size={14} /></span> {t("tab_deps")}
+              </button>
+              <button className={`tab-btn ${activeTab === "git" ? "active" : ""}`} onClick={() => setActiveTab("git")}>
+                <span className="tab-icon"><GitBranch size={14} /></span> {t("tab_git")}
               </button>
             </div>
 
@@ -572,15 +666,15 @@ export default function App() {
                       <div className="config-card-title">
                         <span className="config-card-title-icon"><FileText size={18} /></span>
                         <div>
-                          <h3>Command & Path</h3>
-                          <span>실행 명령어 및 인터프리터 설정</span>
+                          <h3>{t("command_and_path")}</h3>
+                          <span>{t("command_and_path_desc")}</span>
                         </div>
                       </div>
-                      {hasVenv && <span className="uv-badge">uv managed</span>}
+                      {hasVenv && <span className="uv-badge">{t("uv_managed")}</span>}
                     </div>
 
                     <div className="config-field">
-                      <div className="config-field-label">Entry Command</div>
+                      <div className="config-field-label">{t("entry_command")}</div>
                       <input
                         className="config-input"
                         value={editCmd}
@@ -593,7 +687,7 @@ export default function App() {
 
                     <div className="config-field-row">
                       <div className="config-field" style={{ flex: 1 }}>
-                        <div className="config-field-label">Working Directory</div>
+                        <div className="config-field-label">{t("working_directory")}</div>
                         <div style={{ display: "flex", gap: 8 }}>
                           <input
                             className="config-input"
@@ -603,12 +697,12 @@ export default function App() {
                             disabled={isBusy}
                           />
                           <button className="config-browse-btn" style={{ marginTop: 0 }} onClick={() => handleConfigBrowse("path")} disabled={isBusy}>
-                            Browse…
+                            {t("browse")}
                           </button>
                         </div>
                       </div>
                       <div className="config-field" style={{ flex: 1 }}>
-                        <div className="config-field-label">Python Interpreter</div>
+                        <div className="config-field-label">{t("python_interpreter")}</div>
                         <div style={{ display: "flex", gap: 8 }}>
                           <input
                             className="config-input"
@@ -618,7 +712,7 @@ export default function App() {
                             disabled={isBusy}
                           />
                           <button className="config-browse-btn" style={{ marginTop: 0 }} onClick={() => handleConfigBrowse("python")} disabled={isBusy}>
-                            Browse…
+                            {t("browse")}
                           </button>
                         </div>
                       </div>
@@ -634,8 +728,8 @@ export default function App() {
                       <div className="config-card-title">
                         <span className="config-card-title-icon"><Wrench size={18} /></span>
                         <div>
-                          <h3>Environment Variables</h3>
-                          <span>프로세스 실행 시 적용되는 환경변수</span>
+                          <h3>{t("env_vars")}</h3>
+                          <span>{t("env_vars_desc")}</span>
                         </div>
                       </div>
                     </div>
@@ -680,7 +774,7 @@ export default function App() {
                       className="env-add-btn"
                       onClick={() => setEnvEntries([...envEntries, { key: "", value: "" }])}
                     >
-                      + Add Variable
+                      {t("add_variable")}
                     </button>
                   </div>
                 </div>
@@ -691,17 +785,17 @@ export default function App() {
                   <div className="deps-card">
                     <div className="deps-header">
                       <div>
-                        <h3 style={{ display: 'flex', alignItems: 'center', gap: 6 }}><PackageSearch size={16} /> Installed Packages</h3>
+                        <h3 style={{ display: 'flex', alignItems: 'center', gap: 6 }}><PackageSearch size={16} /> {t("installed_packages")}</h3>
                         <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-                          {hasVenv ? `${packages.length} packages in .venv` : ".venv not found"}
+                          {hasVenv ? t("packages_count", { n: packages.length }) : t("venv_not_found")}
                         </span>
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
                         <button className="deps-sync-btn" onClick={() => selectedProject && fetchPackages(selectedProject.path)} disabled={loadingPkgs}>
-                          {loadingPkgs ? "Loading…" : <><RefreshCw size={12} /> Refresh</>}
+                          {loadingPkgs ? t("loading") : <><RefreshCw size={12} /> {t("refresh")}</>}
                         </button>
                         <button className="deps-sync-btn" style={{ background: 'var(--accent)', color: 'white', borderColor: 'var(--accent)' }} onClick={handleSync} disabled={isBusy}>
-                          {isInstalling ? "Syncing…" : <><DownloadCloud size={12} /> Sync Now</>}
+                          {isInstalling ? t("syncing") : <><DownloadCloud size={12} /> {t("sync_now")}</>}
                         </button>
                       </div>
                     </div>
@@ -710,8 +804,8 @@ export default function App() {
                         <table className="deps-table">
                           <thead>
                             <tr>
-                              <th>Package</th>
-                              <th>Version</th>
+                              <th>{t("pkg_package")}</th>
+                              <th>{t("pkg_version")}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -728,10 +822,85 @@ export default function App() {
                       <div className="deps-info">
                         <p style={{ color: "var(--text-tertiary)" }}>
                           {hasVenv
-                            ? loadingPkgs ? "패키지 목록을 불러오는 중..." : "설치된 패키지가 없습니다."
-                            : "가상환경(.venv)이 아직 없습니다. Sync Now를 클릭하거나 Run으로 자동 생성하세요."}
+                            ? loadingPkgs ? t("deps_loading") : t("deps_empty")
+                            : t("deps_no_venv")}
                         </p>
                       </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "git" && (
+                <div className="git-panel">
+                  <div className="config-card">
+                    <div className="config-card-header">
+                      <div className="config-card-title">
+                        <span className="config-card-title-icon"><GitBranch size={18} /></span>
+                        <div>
+                          <h3>{t("tab_git")}</h3>
+                          <span>{selectedProject.git_url || selectedProject.path}</span>
+                        </div>
+                      </div>
+                      {gitStatus?.is_repo && (
+                        <div className="git-actions">
+                          <button className="deps-sync-btn" onClick={() => runGitAction("git_fetch")} disabled={gitBusy || !gitStatus.has_remote}>
+                            <RefreshCw size={12} /> {t("git_fetch")}
+                          </button>
+                          <button className="deps-sync-btn" onClick={() => runGitAction("git_pull")} disabled={gitBusy || !gitStatus.has_remote}>
+                            <Download size={12} /> {t("git_pull")}
+                          </button>
+                          <button className="deps-sync-btn" style={{ background: 'var(--accent)', color: 'white', borderColor: 'var(--accent)' }} onClick={() => runGitAction("git_push")} disabled={gitBusy || !gitStatus.has_remote}>
+                            <Upload size={12} /> {t("git_push")}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {gitLoading ? (
+                      <div className="deps-info"><p style={{ color: "var(--text-tertiary)" }}>{t("git_loading")}</p></div>
+                    ) : !gitStatus?.is_repo ? (
+                      <div className="deps-info"><p style={{ color: "var(--text-tertiary)" }}>{t("git_not_repo")}</p></div>
+                    ) : (
+                      <>
+                        <div className="git-summary">
+                          <span className="git-branch-chip"><GitBranch size={13} /> {gitStatus.branch || "—"}</span>
+                          {gitStatus.has_upstream && (gitStatus.ahead > 0 || gitStatus.behind > 0) ? (
+                            <>
+                              {gitStatus.ahead > 0 && <span className="git-chip git-ahead"><ArrowUp size={12} /> {t("git_ahead", { n: gitStatus.ahead })}</span>}
+                              {gitStatus.behind > 0 && <span className="git-chip git-behind"><ArrowDown size={12} /> {t("git_behind", { n: gitStatus.behind })}</span>}
+                            </>
+                          ) : null}
+                          {!gitStatus.has_remote && <span className="git-chip git-muted">{t("git_no_remote")}</span>}
+                        </div>
+
+                        <div className="git-stats">
+                          <div className="git-stat"><span className="git-stat-num">{gitStatus.staged}</span><span className="git-stat-label">{t("git_staged")}</span></div>
+                          <div className="git-stat"><span className="git-stat-num">{gitStatus.modified}</span><span className="git-stat-label">{t("git_modified")}</span></div>
+                          <div className="git-stat"><span className="git-stat-num">{gitStatus.untracked}</span><span className="git-stat-label">{t("git_untracked")}</span></div>
+                        </div>
+
+                        {gitStatus.staged === 0 && gitStatus.modified === 0 && gitStatus.untracked === 0 && (
+                          <p className="git-clean">{t("git_clean")}</p>
+                        )}
+
+                        <div className="git-commits-header">
+                          <History size={13} /> {t("git_recent_commits")}
+                        </div>
+                        {gitCommits.length > 0 ? (
+                          <ul className="git-commits">
+                            {gitCommits.map((c) => (
+                              <li key={c.hash} className="git-commit">
+                                <code className="git-commit-hash">{c.hash}</code>
+                                <span className="git-commit-msg">{c.message}</span>
+                                <span className="git-commit-meta">{c.author} · {c.date}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p style={{ color: "var(--text-tertiary)", fontSize: 13 }}>{t("git_no_commits")}</p>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -750,20 +919,20 @@ export default function App() {
           <div className="empty-state">
             <div className="main-drag-region" />
             <div className="empty-state-icon"><FolderOpen size={48} strokeWidth={1.5} /></div>
-            <p>No projects yet</p>
-            <p className="muted">Click '+ Add Project' to register your first Python project.</p>
+            <p>{t("no_projects")}</p>
+            <p className="muted">{t("no_projects_hint")}</p>
           </div>
         )}
       </main>
 
-      {/* ═══ Modal ═══ */}
+      {/* ═══ Add Project Modal ═══ */}
       {showAddModal && (
         <div className="modal-backdrop" onClick={() => setShowAddModal(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Add New Project</h3>
+            <h3>{t("add_new_project")}</h3>
             <form onSubmit={handleAddProject}>
               <div className="form-group">
-                <label>Project Name</label>
+                <label>{t("project_name")}</label>
                 <input
                   type="text"
                   placeholder="e.g. ComfyUI, ACE-Step"
@@ -774,7 +943,7 @@ export default function App() {
                 />
               </div>
               <div className="form-group">
-                <label>Project Path</label>
+                <label>{t("project_path")}</label>
                 <div className="form-group-row">
                   <input
                     type="text"
@@ -784,12 +953,12 @@ export default function App() {
                     required
                   />
                   <button type="button" className="btn-browse" onClick={handleSelectFolder}>
-                    Browse…
+                    {t("browse")}
                   </button>
                 </div>
               </div>
               <div className="form-group">
-                <label>Git URL (optional)</label>
+                <label>{t("git_url_optional")}</label>
                 <input
                   type="text"
                   placeholder="https://github.com/..."
@@ -798,7 +967,7 @@ export default function App() {
                 />
               </div>
               <div className="form-group">
-                <label>Run Command</label>
+                <label>{t("run_command")}</label>
                 <input
                   type="text"
                   placeholder="python main.py, uv run acestep, streamlit run app.py"
@@ -808,8 +977,8 @@ export default function App() {
                 />
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Save</button>
+                <button type="button" className="btn-secondary" onClick={() => setShowAddModal(false)}>{t("cancel")}</button>
+                <button type="submit" className="btn-primary">{t("save")}</button>
               </div>
             </form>
           </div>
@@ -820,13 +989,12 @@ export default function App() {
       {setupModalConfig && (
         <div className="modal-backdrop" onClick={() => !isSettingUp && setSetupModalConfig(null)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Configure Python Environment</h3>
+            <h3>{t("configure_env")}</h3>
             <p style={{ marginBottom: 16, color: "var(--text-secondary)", fontSize: 13, lineHeight: 1.5 }}>
-              No virtual environment (.venv) was found in <strong>{setupModalConfig.project.name}</strong>.<br />
-              Do you want to initialize one using <code>uv</code>?
+              {t("no_venv_found", { name: setupModalConfig.project.name })}
             </p>
             <div className="form-group">
-              <label>Python Version</label>
+              <label>{t("python_version")}</label>
               <select value={setupPythonVer} onChange={e => setSetupPythonVer(e.target.value)} disabled={isSettingUp}>
                 <option value="3.10">Python 3.10</option>
                 <option value="3.11">Python 3.11</option>
@@ -836,39 +1004,66 @@ export default function App() {
             </div>
             {setupModalConfig.hasReqs && (
               <div className="form-group" style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12 }}>
-                <input 
-                  type="checkbox" 
-                  id="install_reqs" 
-                  checked={setupInstallReqs} 
-                  onChange={e => setSetupInstallReqs(e.target.checked)} 
-                  disabled={isSettingUp} 
+                <input
+                  type="checkbox"
+                  id="install_reqs"
+                  checked={setupInstallReqs}
+                  onChange={e => setSetupInstallReqs(e.target.checked)}
+                  disabled={isSettingUp}
                 />
                 <label htmlFor="install_reqs" style={{ marginBottom: 0 }}>
-                  Install <code>requirements.txt</code> dependencies
+                  {t("install_reqs")}
                 </label>
               </div>
             )}
             <div className="modal-actions" style={{ marginTop: 24 }}>
-              <button 
-                type="button" 
-                className="btn-secondary" 
+              <button
+                type="button"
+                className="btn-secondary"
                 onClick={() => {
                   finishAddProject(setupModalConfig.project);
                   setSetupModalConfig(null);
-                }} 
+                }}
                 disabled={isSettingUp}
               >
-                Skip
+                {t("skip")}
               </button>
-              <button 
-                type="button" 
-                className="btn-primary" 
+              <button
+                type="button"
+                className="btn-primary"
                 onClick={handleSetupProjectEnv}
                 disabled={isSettingUp}
               >
-                {isSettingUp ? "Setting up..." : "Initialize"}
+                {isSettingUp ? t("setting_up") : t("initialize")}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kill Port Modal (manual entry) */}
+      {killPortModalOpen && (
+        <div className="modal-backdrop" onClick={() => setKillPortModalOpen(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>{t("kill_port")}</h3>
+            <form onSubmit={(e) => { e.preventDefault(); submitKillPortModal(); }}>
+              <div className="form-group">
+                <label>{t("enter_port")}</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={65535}
+                  placeholder="8080"
+                  value={killPortInput}
+                  onChange={(e) => setKillPortInput(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={() => setKillPortModalOpen(false)}>{t("cancel")}</button>
+                <button type="submit" className="btn-primary">{t("kill_port")}</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -879,21 +1074,29 @@ export default function App() {
           <div className="modal-content about-modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', padding: 44 }}>
             <img src="/icons/128x128.png" alt="uvws icon" width="56" height="56" style={{ marginBottom: 24, borderRadius: 16, display: 'block', margin: '0 auto 24px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }} />
             <h2 style={{ margin: '0 0 6px 0', color: 'var(--text-primary)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px' }}>uvws</h2>
-            <p style={{ margin: '0 0 6px 0', color: 'var(--text-tertiary)', fontSize: 12, fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' as const }}>Version 0.1.0 · Beta</p>
+            <p style={{ margin: '0 0 6px 0', color: 'var(--text-tertiary)', fontSize: 12, fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' as const }}>{t("version_beta", { v: appVersion })}</p>
             <p style={{ lineHeight: 1.7, color: 'var(--text-secondary)', fontSize: 13, margin: '16px 0 24px', maxWidth: 340, marginLeft: 'auto', marginRight: 'auto' }}>
-              A modern Python workspace manager powered by Tauri and uv. Manage, monitor, and run your projects with ease.
+              {t("about_desc")}
             </p>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
-              <button 
-                className="btn-secondary" 
-                onClick={checkForUpdates} 
+
+            <div className="lang-toggle">
+              <span className="lang-toggle-label"><Languages size={13} /> {t("language")}</span>
+              <div className="lang-toggle-buttons">
+                <button className={lang === "ko" ? "active" : ""} onClick={() => setLang("ko")}>한국어</button>
+                <button className={lang === "en" ? "active" : ""} onClick={() => setLang("en")}>English</button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', marginTop: 20 }}>
+              <button
+                className="btn-secondary"
+                onClick={checkForUpdates}
                 disabled={isCheckingUpdate}
                 style={{ width: '100%', justifyContent: 'center' }}
               >
-                {isCheckingUpdate ? "업데이트 확인 중..." : "업데이트 확인"}
+                {isCheckingUpdate ? t("checking_update") : t("check_update")}
               </button>
-              <button className="btn-primary" onClick={() => setShowAbout(false)} style={{ width: '100%' }}>닫기</button>
+              <button className="btn-primary" onClick={() => setShowAbout(false)} style={{ width: '100%' }}>{t("close")}</button>
             </div>
           </div>
         </div>

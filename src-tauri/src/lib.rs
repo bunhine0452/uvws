@@ -1,9 +1,10 @@
 mod config;
+mod git;
 mod runner;
 mod uv;
 
 use config::{ConfigManager, Project};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use tauri::{Manager, State};
 use tokio::process::Command as TokioCommand;
@@ -170,8 +171,10 @@ async fn setup_project_env(path: String, python_version: String, install_reqs: b
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let process_registry = Arc::new(runner::ProcessRegistry::default());
+    // 앱 종료 이벤트 핸들러에서 사용할 레지스트리 핸들 (setup으로 move되기 전에 복제)
+    let registry_for_exit = Arc::clone(&process_registry);
 
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
@@ -181,6 +184,18 @@ pub fn run() {
             app.manage(AppState {
                 config_manager: Mutex::new(config_manager),
             });
+
+            // 이전 세션이 SIGKILL 등으로 강제 종료되어 남은 고아 서버를 정리하고,
+            // 이번 세션의 실행 중 PID를 보존할 파일 경로를 레지스트리에 설정합니다.
+            let pid_file: PathBuf = app
+                .handle()
+                .path()
+                .app_config_dir()
+                .unwrap_or_else(|_| PathBuf::from("."))
+                .join("uvws_running_pids.json");
+            runner::cleanup_orphans(&pid_file);
+            *process_registry.pid_file.lock().unwrap() = Some(pid_file);
+
             app.manage(process_registry);
             Ok(())
         })
@@ -198,8 +213,20 @@ pub fn run() {
             runner::stop_project,
             runner::sync_project_dependencies,
             runner::get_process_logs,
-            runner::kill_port
+            runner::kill_port,
+            git::git_status,
+            git::git_log,
+            git::git_fetch,
+            git::git_pull,
+            git::git_push
         ])
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    // 앱이 종료될 때(Cmd+Q, 창 닫기, 메뉴 종료 등) 실행 중인 모든 서버를 함께 정리합니다.
+    app.run(move |_app_handle, event| {
+        if let tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit = event {
+            runner::kill_all_processes(&registry_for_exit);
+        }
+    });
 }

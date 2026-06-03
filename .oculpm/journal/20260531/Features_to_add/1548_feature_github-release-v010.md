@@ -1,52 +1,58 @@
 ---
 schema_version: 1
 type: feature
-slug: github-release-v010
+slug: "github-release-v010"
 status: done
 difficulty: high
 created_at: "2026-05-31T15:36:43+09:00"
 updated_at: "2026-05-31T15:48:00+09:00"
 session_id: "20260531-002"
 agent:
-  id: antigravity
+  id: "antigravity"
   version: "1.0"
-language: ko
-verified_by_user: false
+language: "ko"
+verified_by_user: true
 files_touched:
-  - path: .gitignore
+  - path: ".gitignore"
     op: update
     bytes_added: 120
     bytes_removed: 0
-  - path: src-tauri/src/runner.rs
+  - path: "src-tauri/src/runner.rs"
     op: update
     bytes_added: 1800
     bytes_removed: 600
-  - path: src/App.tsx
+  - path: "src/App.tsx"
     op: update
     bytes_added: 45
     bytes_removed: 30
-  - path: src-tauri/tauri.conf.json
+  - path: "src-tauri/tauri.conf.json"
     op: update
     bytes_added: 5
     bytes_removed: 5
-  - path: README.md
+  - path: "README.md"
     op: update
     bytes_added: 5200
     bytes_removed: 378
-  - path: LICENSE
+  - path: "LICENSE"
     op: create
     bytes_added: 1070
     bytes_removed: 0
-  - path: .github/workflows/release.yml
+  - path: ".github/workflows/release.yml"
     op: create
     bytes_added: 1850
     bytes_removed: 0
-  - path: docs/alpha/preview.png
+  - path: "docs/alpha/preview.png"
     op: create
     bytes_added: 150000
     bytes_removed: 0
 related: []
-tags: ["github", "release", "ci", "readme", "windows-compat", "cross-platform"]
+tags:
+  - "github"
+  - "release"
+  - "ci"
+  - "readme"
+  - "windows-compat"
+  - "cross-platform"
 ---
 
 [x] GitHub 연결, README 작성, Windows 호환 수정, v0.1.0 릴리스 출시

@@ -3,6 +3,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { useI18n } from "../i18n";
 import "@xterm/xterm/css/xterm.css";
 
 interface TerminalViewProps {
@@ -11,6 +12,7 @@ interface TerminalViewProps {
 }
 
 export default function TerminalView({ projectId, projectName }: TerminalViewProps) {
+  const { t } = useI18n();
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -75,7 +77,7 @@ export default function TerminalView({ projectId, projectName }: TerminalViewPro
       if (logs) {
         term.write(logs);
       } else {
-        term.write("\x1b[38;2;100;100;110m— No logs yet. Click Run to start.\x1b[0m\r\n");
+        term.write(`\x1b[38;2;100;100;110m${t("no_logs")}\x1b[0m\r\n`);
       }
     });
 
