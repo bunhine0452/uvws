@@ -13,13 +13,12 @@ struct AppState {
     config_manager: Mutex<ConfigManager>,
 }
 
-#[tauri::command]
-fn get_projects(state: State<'_, AppState>, registry: State<'_, Arc<runner::ProcessRegistry>>) -> Result<Vec<Project>, String> {
-    let manager = state.config_manager.lock().unwrap();
-    let mut config = manager.read_config();
+/// 설정 파일에는 status가 항상 "Stopped"로만 저장되므로, 실제 실행 상태(Running/포트)는
+/// 레지스트리에서 읽어 병합한다. get/add/update/delete 모든 커맨드가 동일한 목록을 반환해야
+/// 프론트엔드가 setProjects로 실행 중 프로젝트의 상태를 덮어쓰지 않는다.
+fn apply_live_status(projects: &mut [Project], registry: &runner::ProcessRegistry) {
     let active = registry.active_processes.lock().unwrap();
-
-    for p in &mut config.projects {
+    for p in projects.iter_mut() {
         if let Some(process) = active.get(&p.id) {
             p.status = "Running".to_string();
             p.port = *process.port.lock().unwrap();
@@ -28,12 +27,18 @@ fn get_projects(state: State<'_, AppState>, registry: State<'_, Arc<runner::Proc
             p.port = None;
         }
     }
-    
+}
+
+#[tauri::command]
+fn get_projects(state: State<'_, AppState>, registry: State<'_, Arc<runner::ProcessRegistry>>) -> Result<Vec<Project>, String> {
+    let manager = state.config_manager.lock().unwrap();
+    let mut config = manager.read_config();
+    apply_live_status(&mut config.projects, &registry);
     Ok(config.projects)
 }
 
 #[tauri::command]
-fn add_project(state: State<'_, AppState>, mut project: Project) -> Result<Vec<Project>, String> {
+fn add_project(state: State<'_, AppState>, registry: State<'_, Arc<runner::ProcessRegistry>>, mut project: Project) -> Result<Vec<Project>, String> {
     let manager = state.config_manager.lock().unwrap();
     let mut config = manager.read_config();
 
@@ -42,11 +47,12 @@ fn add_project(state: State<'_, AppState>, mut project: Project) -> Result<Vec<P
     config.projects.push(project);
 
     manager.write_config(&config)?;
+    apply_live_status(&mut config.projects, &registry);
     Ok(config.projects)
 }
 
 #[tauri::command]
-fn update_project(state: State<'_, AppState>, project: Project) -> Result<Vec<Project>, String> {
+fn update_project(state: State<'_, AppState>, registry: State<'_, Arc<runner::ProcessRegistry>>, project: Project) -> Result<Vec<Project>, String> {
     let manager = state.config_manager.lock().unwrap();
     let mut config = manager.read_config();
 
@@ -58,23 +64,25 @@ fn update_project(state: State<'_, AppState>, project: Project) -> Result<Vec<Pr
         existing.env = project.env;
         existing.python_path = project.python_path;
         existing.icon_color = project.icon_color;
-        // status는 변경하지 않음
+        // status는 변경하지 않음 (실행 상태는 아래에서 레지스트리 기준으로 병합)
     } else {
         return Err("Project not found".to_string());
     }
 
     manager.write_config(&config)?;
+    apply_live_status(&mut config.projects, &registry);
     Ok(config.projects)
 }
 
 #[tauri::command]
-fn delete_project(state: State<'_, AppState>, id: String) -> Result<Vec<Project>, String> {
+fn delete_project(state: State<'_, AppState>, registry: State<'_, Arc<runner::ProcessRegistry>>, id: String) -> Result<Vec<Project>, String> {
     let manager = state.config_manager.lock().unwrap();
     let mut config = manager.read_config();
 
     config.projects.retain(|p| p.id != id);
 
     manager.write_config(&config)?;
+    apply_live_status(&mut config.projects, &registry);
     Ok(config.projects)
 }
 

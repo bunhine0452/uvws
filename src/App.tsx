@@ -81,7 +81,7 @@ export default function App() {
 
   // New States for About & Smart Import
   const [showAbout, setShowAbout] = useState(false);
-  const [appVersion, setAppVersion] = useState("0.2.1");
+  const [appVersion, setAppVersion] = useState("0.2.2");
   const [setupModalConfig, setSetupModalConfig] = useState<{project: Project, hasReqs: boolean} | null>(null);
   const [setupPythonVer, setSetupPythonVer] = useState("3.12");
   const [setupInstallReqs, setSetupInstallReqs] = useState(true);
@@ -558,6 +558,9 @@ export default function App() {
                 <div className="project-item-name">{p.name}</div>
                 <div className="project-item-path">{shortenPath(p.path)}</div>
               </div>
+              {p.status === "Running" && projectPorts[p.id] && (
+                <span className="project-port-chip">:{projectPorts[p.id]}</span>
+              )}
               <span className={`project-status-dot ${p.status.toLowerCase()}`} />
               <button
                 className="project-delete-btn"
