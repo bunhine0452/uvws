@@ -47,3 +47,7 @@ test_runner.py
 # Tauri Updater Keys
 src-tauri/updater.key
 src-tauri/updater.key.pub
+
+# Vercel
+.vercel
+landing/.vercel
