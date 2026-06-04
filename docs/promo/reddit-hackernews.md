@@ -31,8 +31,8 @@ It's built with Tauri 2 + React. macOS (Apple Silicon + Intel) and Windows build
 
 Fair warning: it's a side project and not notarized yet, so macOS will warn you on first launch — there's a one-liner workaround in the README.
 
+Site / downloads: https://uvws.vercel.app
 GitHub: https://github.com/bunhine0452/uvws
-Releases: https://github.com/bunhine0452/uvws/releases
 
 Happy to hear what's missing or annoying.
 
