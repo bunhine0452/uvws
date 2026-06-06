@@ -10,7 +10,7 @@ import {
   Globe, Copy, Square, Play, Clock, Box, FileCode, Settings, Wrench,
   PackageSearch, FolderOpen, X, RefreshCw, DownloadCloud, FileText, Zap,
   GitBranch, ArrowUp, ArrowDown, Download, Upload, Languages, History,
-  RotateCw, ExternalLink
+  RotateCw, ExternalLink, PanelLeftClose, PanelLeftOpen
 } from "lucide-react";
 import TerminalView from "./components/TerminalView";
 import { useI18n } from "./i18n";
@@ -89,6 +89,16 @@ export default function App() {
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
+
+  // Sidebar collapse: pinned-open vs collapsed (with hover-to-peek when collapsed)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
+    () => localStorage.getItem("uvws.sidebar.collapsed") === "1"
+  );
+  const [sidebarPeek, setSidebarPeek] = useState(false);
+  useEffect(() => {
+    localStorage.setItem("uvws.sidebar.collapsed", sidebarCollapsed ? "1" : "0");
+    if (!sidebarCollapsed) setSidebarPeek(false);
+  }, [sidebarCollapsed]);
 
   // Git state
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
@@ -553,9 +563,30 @@ export default function App() {
   const isBusy = isRunning || isInstalling;
 
   return (
-    <div className="app-container">
-      <aside className="sidebar">
+    <div className={`app-container${sidebarCollapsed ? " sidebar-collapsed" : ""}${sidebarPeek ? " sidebar-peek" : ""}`}>
+      {/* When collapsed: thin left-edge zone reveals the sidebar on hover, and a
+          floating button re-pins it open. */}
+      {sidebarCollapsed && (
+        <>
+          <div className="sidebar-hover-zone" onMouseEnter={() => setSidebarPeek(true)} />
+          <button
+            className="sidebar-open-btn"
+            onClick={() => setSidebarCollapsed(false)}
+            title={t("sidebar_pin_open")}
+          >
+            <PanelLeftOpen size={16} />
+          </button>
+        </>
+      )}
+      <aside className="sidebar" onMouseLeave={() => sidebarCollapsed && setSidebarPeek(false)}>
         <div className="sidebar-drag-region" />
+        <button
+          className="sidebar-collapse-btn"
+          onClick={() => { setSidebarCollapsed(true); setSidebarPeek(false); }}
+          title={t("sidebar_collapse")}
+        >
+          <PanelLeftClose size={15} />
+        </button>
         <div className="sidebar-brand" onClick={() => setShowAbout(true)} style={{ cursor: "pointer" }}>
           <img src="/icons/128x128.png" alt="uvws icon" width="34" height="34" style={{ borderRadius: 'var(--radius-md)', flexShrink: 0, boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }} />
           <div className="sidebar-brand-text">

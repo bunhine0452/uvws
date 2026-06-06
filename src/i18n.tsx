@@ -138,6 +138,9 @@ const translations: Record<Lang, Record<string, string>> = {
     restart: "재시작",
     restarting: "재시작 중…",
     failed_restart: "재시작 실패: {err}",
+    // Sidebar
+    sidebar_collapse: "사이드바 접기",
+    sidebar_pin_open: "사이드바 고정",
   },
   en: {
     workspace_subtitle: "Python Workspace",
@@ -255,6 +258,8 @@ const translations: Record<Lang, Record<string, string>> = {
     restart: "Restart",
     restarting: "Restarting…",
     failed_restart: "Failed to restart: {err}",
+    sidebar_collapse: "Collapse sidebar",
+    sidebar_pin_open: "Pin sidebar open",
   },
 };
 

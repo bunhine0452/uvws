@@ -17,11 +17,12 @@
   --mesh-4: rgba(120, 224, 205, 0.34);   /* mint   */
   --mesh-veil: rgba(255, 255, 255, 0.30);
 
-  /* ─── Glass materials ─── */
-  --glass-fill: rgba(255, 255, 255, 0.46);
-  --glass-fill-strong: rgba(255, 255, 255, 0.66);
-  --glass-fill-hover: rgba(255, 255, 255, 0.62);
-  --glass-fill-active: rgba(255, 255, 255, 0.78);
+  /* ─── Glass materials (kept genuinely translucent — you should see the
+         ambient field bleed through; legibility comes from the blur, not opacity) ─── */
+  --glass-fill: rgba(255, 255, 255, 0.26);
+  --glass-fill-strong: rgba(255, 255, 255, 0.42);
+  --glass-fill-hover: rgba(255, 255, 255, 0.38);
+  --glass-fill-active: rgba(255, 255, 255, 0.54);
   --glass-highlight: rgba(255, 255, 255, 0.95);  /* top specular edge */
   --glass-rim: rgba(255, 255, 255, 0.45);        /* inner rim */
   --glass-blur: blur(30px) saturate(200%) brightness(1.04);
@@ -123,10 +124,10 @@
     --mesh-4: rgba(24, 196, 196, 0.30);
     --mesh-veil: rgba(8, 10, 20, 0.30);
 
-    --glass-fill: rgba(30, 34, 48, 0.44);
-    --glass-fill-strong: rgba(36, 40, 56, 0.64);
-    --glass-fill-hover: rgba(48, 53, 72, 0.58);
-    --glass-fill-active: rgba(58, 64, 86, 0.72);
+    --glass-fill: rgba(30, 34, 48, 0.30);
+    --glass-fill-strong: rgba(36, 40, 56, 0.46);
+    --glass-fill-hover: rgba(48, 53, 72, 0.44);
+    --glass-fill-active: rgba(58, 64, 86, 0.58);
     --glass-highlight: rgba(255, 255, 255, 0.20);
     --glass-rim: rgba(255, 255, 255, 0.07);
 
@@ -287,6 +288,97 @@ body {
   background: linear-gradient(180deg, var(--glass-highlight), transparent 22%, transparent 78%, var(--glass-rim));
   pointer-events: none;
 }
+
+/* ─── Collapsible sidebar ─── */
+.sidebar {
+  transition: transform var(--duration-normal) var(--ease),
+              box-shadow var(--duration-normal) var(--ease);
+}
+
+/* Collapsed: lift the sidebar out of the flex flow and slide it off-screen so
+   the main content (and an expanded terminal) reclaims the full width. */
+.app-container.sidebar-collapsed .sidebar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 40;
+  transform: translateX(-100%);
+}
+
+/* Peek: hovering the left edge slides it back in as a floating glass overlay. */
+.app-container.sidebar-collapsed.sidebar-peek .sidebar {
+  transform: translateX(0);
+  box-shadow:
+    inset -1px 0 0 0 var(--glass-rim),
+    inset 1px 0 0 0 var(--glass-highlight),
+    24px 0 60px -12px rgba(18, 22, 45, 0.45);
+}
+
+/* Thin invisible strip at the very left edge that triggers the peek. */
+.sidebar-hover-zone {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  z-index: 30;
+  -webkit-app-region: no-drag;
+}
+
+/* Collapse button inside the sidebar (top-right). */
+.sidebar-collapse-btn {
+  position: absolute;
+  top: 42px;
+  right: 12px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--glass-fill-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  box-shadow: var(--elev-glass-sm);
+  -webkit-app-region: no-drag;
+  transition: all var(--duration-fast) var(--ease);
+}
+.sidebar-collapse-btn:hover { color: var(--text-primary); background: var(--glass-fill-active); }
+
+/* Floating button (top-left) to re-pin the sidebar open when collapsed. Sits
+   below the macOS traffic lights of the overlay title bar. */
+.sidebar-open-btn {
+  position: absolute;
+  top: 42px;
+  left: 12px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--glass-fill-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  backdrop-filter: var(--glass-blur-strong);
+  color: var(--text-secondary);
+  cursor: pointer;
+  box-shadow: var(--elev-glass);
+  -webkit-app-region: no-drag;
+  transition: opacity var(--duration-fast) var(--ease), background var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+}
+.sidebar-open-btn:hover { color: var(--text-primary); transform: translateY(-1px); }
+
+/* Hide the floating open-button while the sidebar is peeking. */
+.app-container.sidebar-peek .sidebar-open-btn { opacity: 0; pointer-events: none; }
 
 /* ─── Drag region for window movement ─── */
 .sidebar-drag-region {
@@ -1287,11 +1379,13 @@ body {
   transition: box-shadow var(--duration-normal) var(--ease);
 }
 
-/* Expanded "focus" mode — terminal floats above everything as a glass slab */
+/* Expanded "focus" mode — fills the main content area only (never the sidebar),
+   since it is positioned against .main-content which sits to the right of the
+   sidebar (or full-width when the sidebar is collapsed). */
 .terminal-outer-frame.expanded {
-  position: fixed;
-  inset: 22px;
-  z-index: 900;
+  position: absolute;
+  inset: 14px;
+  z-index: 40;
   min-height: 0;
   border-radius: var(--radius-xl);
   box-shadow:
@@ -1314,16 +1408,6 @@ body {
   min-height: 38px;
 }
 
-/* macOS-style traffic lights (decorative) */
-.terminal-traffic { display: flex; gap: 6px; flex-shrink: 0; padding-left: 2px; }
-.terminal-traffic i {
-  width: 11px; height: 11px; border-radius: 50%;
-  box-shadow: inset 0 0 0 0.5px rgba(0,0,0,0.25), inset 0 1px 1px rgba(255,255,255,0.35);
-}
-.terminal-traffic i:nth-child(1) { background: #ff5f57; }
-.terminal-traffic i:nth-child(2) { background: #febc2e; }
-.terminal-traffic i:nth-child(3) { background: #28c840; }
-
 .terminal-title {
   font-size: 11px;
   font-weight: 500;
@@ -1333,7 +1417,8 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
-  text-align: center;
+  text-align: left;
+  padding-left: 4px;
 }
 
 .terminal-header-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
@@ -1973,8 +2058,8 @@ button:focus:not(:focus-visible) { outline: none; }
 .deps-card,
 .modal-content {
   background-image:
-    radial-gradient(120% 80% at 8% -10%, rgba(255,255,255,0.18), transparent 60%),
-    radial-gradient(120% 90% at 100% 110%, rgba(120,162,255,0.10), transparent 55%);
+    radial-gradient(120% 80% at 8% -10%, rgba(255,255,255,0.10), transparent 60%),
+    radial-gradient(120% 90% at 100% 110%, rgba(120,162,255,0.07), transparent 55%);
 }
 
 /* Respect users who prefer less motion — calm the ambient mesh and sheen. */

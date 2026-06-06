@@ -267,9 +267,6 @@ export default function TerminalView({ projectId, projectName }: TerminalViewPro
   return (
     <div className={`terminal-outer-frame${expanded ? " expanded" : ""}`}>
       <div className="terminal-header-bar">
-        <span className="terminal-traffic" aria-hidden>
-          <i /><i /><i />
-        </span>
         <span className="terminal-title">{title}</span>
         <div className="terminal-header-actions">
           <button

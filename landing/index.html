@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="color-scheme" content="light dark" />
 <title>uvws — uv 기반 파이썬 프로젝트를 클릭 한 번으로</title>
 <meta name="description" content="파이썬 프로젝트 여러 개를 데스크탑 앱에서 관리하고 클릭 한 번으로 실행하세요. uv 기반, 내장 터미널, 포트 강제 종료, Git 통합. macOS · Windows." />
 <link rel="canonical" href="https://uvws.site/" />
@@ -14,166 +15,273 @@
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:image" content="https://uvws.site/preview.png" />
 <link rel="icon" href="icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
+  /* ── Liquid-glass design system, mirrored from the uvws app ── */
   :root {
-    --bg: #0b0d12;
-    --bg-soft: #12151c;
-    --panel: #161a22;
-    --border: #232936;
-    --text: #e7ebf2;
-    --muted: #8b94a7;
-    --indigo: #6366f1;
-    --indigo-bright: #818cf8;
-    --green: #34d399;
-    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    color-scheme: light dark;
+    --bg-base: #e7ebf3;
+    --mesh-1: rgba(120,162,255,0.45);
+    --mesh-2: rgba(193,142,255,0.40);
+    --mesh-3: rgba(255,158,205,0.34);
+    --mesh-4: rgba(120,224,205,0.34);
+    --mesh-veil: rgba(255,255,255,0.28);
+
+    --glass-fill: rgba(255,255,255,0.26);
+    --glass-fill-strong: rgba(255,255,255,0.48);
+    --glass-hover: rgba(255,255,255,0.62);
+    --glass-rim: rgba(255,255,255,0.5);
+    --glass-highlight: rgba(255,255,255,0.92);
+    --blur: blur(30px) saturate(185%);
+
+    --text: #14161c;
+    --text-soft: #50555f;
+    --muted: #868d99;
+    --border: rgba(15,22,45,0.10);
+    --hairline: rgba(15,22,45,0.08);
+
+    --accent: #0a84ff;
+    --accent-2: #36a0ff;
+    --accent-soft: rgba(10,132,255,0.12);
+    --accent-glow: rgba(10,132,255,0.30);
+    --green: #1f9d45;
+
+    --grad-accent: linear-gradient(135deg, #36a0ff 0%, #0a84ff 55%, #0a6cff 100%);
+    --grad-text: linear-gradient(120deg, #0a84ff, #7a5cff 55%, #18b6a0);
+
+    --elev:
+      inset 0 1px 0 0 var(--glass-highlight),
+      inset 0 0 0 1px var(--glass-rim),
+      0 18px 50px -16px rgba(22,28,52,0.28),
+      0 3px 10px -3px rgba(22,28,52,0.14);
+    --elev-sm:
+      inset 0 1px 0 0 var(--glass-highlight),
+      inset 0 0 0 1px var(--glass-rim),
+      0 6px 18px -6px rgba(22,28,52,0.22);
+
+    --mono: 'SF Mono', SFMono-Regular, ui-monospace, Menlo, Consolas, monospace;
+    --sans: 'Inter', -apple-system, 'Pretendard', 'Apple SD Gothic Neo', system-ui, 'Segoe UI', Roboto, sans-serif;
+    --r-sm: 12px; --r-md: 18px; --r-lg: 24px; --r-full: 999px;
   }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg-base: #070810;
+      --mesh-1: rgba(56,120,255,0.40);
+      --mesh-2: rgba(150,92,255,0.38);
+      --mesh-3: rgba(255,92,168,0.24);
+      --mesh-4: rgba(24,196,196,0.28);
+      --mesh-veil: rgba(8,10,20,0.30);
+
+      --glass-fill: rgba(30,34,48,0.34);
+      --glass-fill-strong: rgba(36,40,56,0.5);
+      --glass-hover: rgba(48,53,72,0.55);
+      --glass-rim: rgba(255,255,255,0.08);
+      --glass-highlight: rgba(255,255,255,0.16);
+
+      --text: #f1f3f8;
+      --text-soft: #b6bcca;
+      --muted: #7c8395;
+      --border: rgba(255,255,255,0.10);
+      --hairline: rgba(255,255,255,0.08);
+
+      --accent: #409cff;
+      --accent-2: #5aabff;
+      --accent-soft: rgba(64,156,255,0.18);
+      --accent-glow: rgba(64,156,255,0.40);
+      --green: #34d27a;
+
+      --grad-text: linear-gradient(120deg, #5aabff, #b08cff 55%, #3ad6c0);
+
+      --elev:
+        inset 0 1px 0 0 var(--glass-highlight),
+        inset 0 0 0 1px var(--glass-rim),
+        0 26px 64px -16px rgba(0,0,0,0.66),
+        0 4px 14px -4px rgba(0,0,0,0.5);
+      --elev-sm:
+        inset 0 1px 0 0 var(--glass-highlight),
+        inset 0 0 0 1px var(--glass-rim),
+        0 8px 22px -8px rgba(0,0,0,0.6);
+    }
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body {
-    background: var(--bg);
+    background: var(--bg-base);
     color: var(--text);
-    font-family: -apple-system, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
+    font-family: var(--sans);
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
+    position: relative;
+    min-height: 100vh;
   }
+  /* Ambient liquid mesh the glass refracts */
+  body::before {
+    content: ""; position: fixed; inset: -20%; z-index: -2; pointer-events: none;
+    background:
+      radial-gradient(38% 44% at 14% 16%, var(--mesh-1) 0%, transparent 64%),
+      radial-gradient(34% 40% at 86% 8%, var(--mesh-2) 0%, transparent 62%),
+      radial-gradient(46% 50% at 78% 88%, var(--mesh-3) 0%, transparent 66%),
+      radial-gradient(40% 46% at 24% 92%, var(--mesh-4) 0%, transparent 66%);
+    filter: blur(40px);
+    animation: drift 26s ease-in-out infinite alternate;
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: radial-gradient(120% 90% at 50% 0%, transparent 40%, var(--mesh-veil) 100%);
+  }
+  @keyframes drift {
+    0% { transform: translate3d(0,0,0) scale(1); }
+    50% { transform: translate3d(2.5%,-2%,0) scale(1.08); }
+    100% { transform: translate3d(-2%,2.5%,0) scale(1.04); }
+  }
+  @media (prefers-reduced-motion: reduce) { body::before { animation: none; } }
+
   a { color: inherit; text-decoration: none; }
   .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
 
   /* nav */
   nav {
     position: sticky; top: 0; z-index: 50;
-    backdrop-filter: blur(12px);
-    background: rgba(11,13,18,0.72);
-    border-bottom: 1px solid var(--border);
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    background: var(--glass-fill);
+    box-shadow: inset 0 -1px 0 0 var(--hairline), inset 0 1px 0 0 var(--glass-highlight);
   }
-  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.02em; }
-  .brand img { width: 28px; height: 28px; border-radius: 7px; }
-  .nav-links { display: flex; align-items: center; gap: 22px; font-size: 14px; color: var(--muted); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 62px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: -0.02em; font-size: 17px; }
+  .brand img { width: 28px; height: 28px; border-radius: 8px; box-shadow: var(--elev-sm); }
+  .nav-links { display: flex; align-items: center; gap: 18px; font-size: 14px; color: var(--text-soft); }
   .nav-links a:hover { color: var(--text); }
-  .nav-cta {
-    background: var(--indigo); color: #fff; padding: 8px 16px; border-radius: 8px;
-    font-weight: 600; font-size: 14px; transition: background .15s;
+  @media (max-width: 640px) { .nav-links a.hide-sm { display: none; } }
+
+  .lang-toggle { display: inline-flex; gap: 2px; padding: 3px; border-radius: var(--r-full);
+    background: var(--glass-fill-strong); box-shadow: var(--elev-sm); }
+  .lang-toggle button {
+    border: none; background: transparent; cursor: pointer; font-family: var(--sans);
+    font-size: 12px; font-weight: 700; color: var(--muted); padding: 4px 11px; border-radius: var(--r-full);
+    transition: all .15s ease;
   }
-  .nav-cta:hover { background: var(--indigo-bright); }
-  @media (max-width: 640px) { .nav-links a:not(.nav-cta) { display: none; } }
+  .lang-toggle button.on { background: var(--grad-accent); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 8px var(--accent-glow); }
+
+  .nav-cta {
+    background: var(--grad-accent); color: #fff !important; padding: 8px 16px; border-radius: var(--r-full);
+    font-weight: 600; font-size: 14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 4px 14px -2px var(--accent-glow);
+  }
 
   /* hero */
-  .hero { position: relative; padding: 88px 0 56px; text-align: center; }
-  .hero::before {
-    content: ""; position: absolute; inset: 0;
-    background: radial-gradient(620px 320px at 50% -40px, rgba(99,102,241,0.22), transparent 70%);
-    pointer-events: none;
-  }
+  .hero { position: relative; padding: 92px 0 56px; text-align: center; }
   .pill {
     display: inline-flex; align-items: center; gap: 8px;
-    border: 1px solid var(--border); background: var(--bg-soft);
-    color: var(--muted); font-size: 13px; padding: 6px 14px; border-radius: 999px;
-    font-family: var(--mono);
+    background: var(--glass-fill-strong); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    color: var(--text-soft); font-size: 13px; padding: 7px 15px; border-radius: var(--r-full);
+    font-family: var(--mono); box-shadow: var(--elev-sm);
   }
-  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(52,211,153,0.6); animation: pulse 2s infinite; }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(52,211,153,.5)} 70%{box-shadow:0 0 0 7px rgba(52,211,153,0)} 100%{box-shadow:0 0 0 0 rgba(52,211,153,0)} }
-  h1 {
-    font-size: clamp(34px, 6vw, 58px); line-height: 1.1; letter-spacing: -0.03em;
-    margin: 22px 0 0; font-weight: 800;
-  }
-  h1 .accent { background: linear-gradient(120deg, var(--indigo-bright), var(--green)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .sub { max-width: 620px; margin: 20px auto 0; color: var(--muted); font-size: clamp(16px, 2.2vw, 19px); }
+  h1 { font-size: clamp(34px, 6vw, 58px); line-height: 1.1; letter-spacing: -0.03em; margin: 24px 0 0; font-weight: 800; }
+  h1 .accent { background: var(--grad-text); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { max-width: 620px; margin: 20px auto 0; color: var(--text-soft); font-size: clamp(16px, 2.2vw, 19px); }
   .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 34px; }
   .btn {
-    display: inline-flex; align-items: center; gap: 9px;
-    padding: 13px 22px; border-radius: 10px; font-weight: 600; font-size: 15px;
-    transition: transform .12s, background .15s, border-color .15s;
+    display: inline-flex; align-items: center; gap: 9px; padding: 13px 24px; border-radius: var(--r-full);
+    font-weight: 600; font-size: 15px; font-family: var(--sans); cursor: pointer; border: none;
+    transition: transform .12s var(--ease, ease), filter .15s, background .15s; position: relative; overflow: hidden;
   }
   .btn:active { transform: translateY(1px); }
-  .btn-primary { background: var(--indigo); color: #fff; }
-  .btn-primary:hover { background: var(--indigo-bright); }
-  .btn-ghost { background: var(--bg-soft); border: 1px solid var(--border); color: var(--text); }
-  .btn-ghost:hover { border-color: #38415480; }
+  .btn-primary { background: var(--grad-accent); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.45), 0 6px 18px -4px var(--accent-glow); }
+  .btn-primary::after { content:""; position:absolute; inset:0; background: linear-gradient(115deg, transparent 32%, rgba(255,255,255,0.4) 48%, transparent 62%); transform: translateX(-130%); transition: transform .6s ease; }
+  .btn-primary:hover::after { transform: translateX(130%); }
+  .btn-ghost { background: var(--glass-fill-strong); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); color: var(--text); box-shadow: var(--elev-sm); }
+  .btn-ghost:hover { background: var(--glass-hover); }
   .hero-note { margin-top: 16px; font-size: 13px; color: var(--muted); font-family: var(--mono); }
 
   /* screenshot */
-  .shot { margin: 56px auto 0; max-width: 920px; padding: 0 24px; }
+  .shot { margin: 56px auto 0; max-width: 940px; padding: 0 24px; }
   .shot-frame {
-    border: 1px solid var(--border); border-radius: 14px; overflow: hidden;
-    background: var(--panel);
-    box-shadow: 0 40px 80px -30px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    border-radius: var(--r-lg); overflow: hidden; background: var(--glass-fill);
+    -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); box-shadow: var(--elev);
   }
-  .shot-bar { display: flex; gap: 7px; padding: 13px 16px; border-bottom: 1px solid var(--border); }
-  .shot-bar span { width: 11px; height: 11px; border-radius: 50%; background: #2a3140; }
+  .shot-bar { display: flex; gap: 7px; padding: 13px 16px; box-shadow: inset 0 -1px 0 var(--hairline); }
+  .shot-bar span { width: 11px; height: 11px; border-radius: 50%; }
+  .shot-bar span:nth-child(1){ background:#ff5f57;} .shot-bar span:nth-child(2){ background:#febc2e;} .shot-bar span:nth-child(3){ background:#28c840;}
   .shot-frame img { display: block; width: 100%; }
 
   /* terminal strip */
   .term { max-width: 720px; margin: 64px auto 0; }
   .term-box {
-    background: #07090d; border: 1px solid var(--border); border-radius: 12px;
-    font-family: var(--mono); font-size: 14px; padding: 22px 24px; color: #c9d2e3;
+    background: var(--glass-fill-strong); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    border-radius: var(--r-md); font-family: var(--mono); font-size: 14px; padding: 24px 26px; color: var(--text);
+    box-shadow: var(--elev); line-height: 1.9;
   }
-  .term-box .c { color: #5b657a; }
-  .term-box .g { color: var(--green); }
-  .term-box .p { color: var(--indigo-bright); }
+  .term-box .c { color: var(--muted); }
+  .term-box .g { color: var(--green); font-weight: 700; }
+  .term-box .p { color: var(--accent); }
   .term-line { white-space: pre-wrap; }
-  .term-strike { color: #5b657a; text-decoration: line-through; }
+  .term-strike { color: var(--muted); text-decoration: line-through; }
 
-  /* section */
+  /* sections */
   section { padding: 84px 0; }
-  .eyebrow { font-family: var(--mono); font-size: 13px; color: var(--indigo-bright); letter-spacing: 0.04em; }
+  .eyebrow { font-family: var(--mono); font-size: 13px; color: var(--accent); letter-spacing: 0.06em; font-weight: 600; }
   h2 { font-size: clamp(26px, 4vw, 36px); letter-spacing: -0.02em; margin: 10px 0 0; font-weight: 800; }
-  .section-sub { color: var(--muted); margin-top: 12px; max-width: 560px; }
+  .section-sub { color: var(--text-soft); margin-top: 12px; max-width: 560px; }
 
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 44px; }
   @media (max-width: 820px) { .grid { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 540px) { .grid { grid-template-columns: 1fr; } }
   .card {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
-    padding: 24px; transition: border-color .15s, transform .15s;
+    background: var(--glass-fill); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    border-radius: var(--r-md); padding: 24px; box-shadow: var(--elev-sm);
+    transition: transform .15s, box-shadow .15s; position: relative; overflow: hidden;
+    background-image: radial-gradient(120% 80% at 8% -10%, rgba(255,255,255,0.10), transparent 60%);
   }
-  .card:hover { border-color: #384154; transform: translateY(-2px); }
-  .card .ico { font-size: 22px; }
-  .card h3 { font-size: 16px; margin: 14px 0 7px; letter-spacing: -0.01em; }
-  .card p { font-size: 14px; color: var(--muted); }
+  .card:hover { transform: translateY(-3px); box-shadow: var(--elev); }
+  .card .ico {
+    width: 42px; height: 42px; display: flex; align-items: center; justify-content: center;
+    font-size: 22px; border-radius: var(--r-sm); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--glass-rim);
+  }
+  .card h3 { font-size: 16px; margin: 16px 0 7px; letter-spacing: -0.01em; }
+  .card p { font-size: 14px; color: var(--text-soft); }
+  .card code { font-family: var(--mono); font-size: 12.5px; color: var(--accent); background: var(--accent-soft); padding: 1px 6px; border-radius: 6px; }
 
   /* download */
-  #download { text-align: center; border-top: 1px solid var(--border); }
-  .dl-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-top: 40px; }
-  @media (max-width: 700px) { .dl-grid { grid-template-columns: 1fr; max-width: 360px; margin-left: auto; margin-right: auto; } }
-  .dl-card {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 14px;
-    padding: 26px 20px; transition: border-color .15s, transform .15s;
+  #download { text-align: center; }
+  .release-notes {
+    display: inline-flex; align-items: center; gap: 8px; margin: 20px auto 0; padding: 9px 17px; border-radius: var(--r-full);
+    background: var(--glass-fill-strong); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    color: var(--text-soft); font-size: 13.5px; font-weight: 600; box-shadow: var(--elev-sm); transition: transform .12s, color .15s;
   }
-  .dl-card:hover { border-color: var(--indigo); transform: translateY(-2px); }
+  .release-notes:hover { color: var(--text); transform: translateY(-1px); }
+  .release-notes .tag { font-family: var(--mono); font-size: 12px; color: var(--accent); background: var(--accent-soft); padding: 1px 9px; border-radius: var(--r-full); }
+
+  .dl-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-top: 36px; }
+  @media (max-width: 700px) { .dl-grid { grid-template-columns: 1fr; max-width: 380px; margin-left: auto; margin-right: auto; } }
+  .dl-card {
+    background: var(--glass-fill); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    border-radius: var(--r-md); padding: 26px 22px; box-shadow: var(--elev-sm);
+    transition: transform .15s, box-shadow .15s; text-align: center;
+  }
+  .dl-card:hover { transform: translateY(-3px); box-shadow: var(--elev); }
   .dl-os { font-weight: 700; font-size: 17px; }
   .dl-detail { color: var(--muted); font-size: 13px; margin-top: 5px; font-family: var(--mono); }
-  .dl-go { display: inline-block; margin-top: 16px; color: var(--indigo-bright); font-weight: 600; font-size: 14px; }
-  .dl-ver { font-family: var(--mono); }
-  /* "what's new" / release-notes link */
-  .release-notes {
-    display: inline-flex; align-items: center; gap: 8px;
-    margin: 18px auto 0; padding: 9px 16px; border-radius: 999px;
-    background: var(--bg-soft); border: 1px solid var(--border);
-    color: var(--muted); font-size: 13.5px; font-weight: 600;
-    transition: border-color .15s, color .15s, transform .12s;
-  }
-  .release-notes:hover { border-color: var(--indigo); color: var(--text); transform: translateY(-1px); }
-  .release-notes .tag {
-    font-family: var(--mono); font-size: 12px; color: var(--indigo-bright);
-    background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.3);
-    padding: 1px 8px; border-radius: 999px;
-  }
+  .dl-go { display: inline-block; margin-top: 16px; color: var(--accent); font-weight: 700; font-size: 14px; }
   .prereq {
-    margin: 40px auto 0; max-width: 640px; text-align: left;
-    background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px;
+    margin: 44px auto 0; max-width: 640px; text-align: left;
+    background: var(--glass-fill); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    border-radius: var(--r-md); padding: 22px 24px; box-shadow: var(--elev-sm);
   }
   .prereq h4 { font-size: 14px; margin-bottom: 12px; }
   .prereq code {
-    display: block; font-family: var(--mono); font-size: 13px; background: #07090d;
-    border: 1px solid var(--border); border-radius: 8px; padding: 11px 14px; margin-top: 8px;
-    color: #c9d2e3; overflow-x: auto;
+    display: block; font-family: var(--mono); font-size: 13px;
+    background: rgba(0,0,0,0.16); border-radius: 10px; padding: 11px 14px; margin-top: 8px;
+    color: var(--text); overflow-x: auto; box-shadow: inset 0 0 0 1px var(--hairline);
   }
   .prereq .lbl { color: var(--muted); font-size: 12px; font-family: var(--mono); margin-top: 14px; display: block; }
 
-  footer { border-top: 1px solid var(--border); padding: 40px 0; color: var(--muted); font-size: 14px; }
+  footer { box-shadow: inset 0 1px 0 var(--hairline); padding: 40px 0; color: var(--muted); font-size: 14px; margin-top: 40px; }
   footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
   footer a:hover { color: var(--text); }
 </style>
@@ -184,83 +292,86 @@
   <div class="wrap">
     <a class="brand" href="#top"><img src="icon.png" alt="uvws" /> uvws</a>
     <div class="nav-links">
-      <a href="#features">기능</a>
-      <a href="https://github.com/bunhine0452/uvws" target="_blank" rel="noopener">GitHub</a>
-      <a class="nav-cta" href="#download">다운로드</a>
+      <a class="hide-sm" href="#features" data-i18n="nav_features">기능</a>
+      <a class="hide-sm" href="https://github.com/bunhine0452/uvws" target="_blank" rel="noopener">GitHub</a>
+      <span class="lang-toggle">
+        <button id="lang-ko" onclick="setLang('ko')">한국어</button>
+        <button id="lang-en" onclick="setLang('en')">EN</button>
+      </span>
+      <a class="nav-cta" href="#download" data-i18n="nav_download">다운로드</a>
     </div>
   </div>
 </nav>
 
 <header id="top" class="hero">
   <div class="wrap">
-    <span class="pill"><span class="dot"></span> uv 기반 · Tauri 2 · 오픈소스</span>
-    <h1>파이썬 프로젝트를<br /><span class="accent">클릭 한 번으로</span> 실행</h1>
-    <p class="sub">cd 하고 venv 켜고 python 돌리던 거, 이제 폴더 한 번 등록해두면 끝.
-      여러 프로젝트를 데스크탑 앱 하나에서 관리하고 실행하세요.</p>
+    <span class="pill"><span class="dot"></span> <span data-i18n="hero_pill">uv 기반 · Tauri 2 · 오픈소스</span></span>
+    <h1 data-i18n="hero_title">파이썬 프로젝트를<br /><span class="accent">클릭 한 번으로</span> 실행</h1>
+    <p class="sub" data-i18n="hero_sub">cd 하고 venv 켜고 python 돌리던 거, 이제 폴더 한 번 등록해두면 끝. 여러 프로젝트를 데스크탑 앱 하나에서 관리하고 실행하세요.</p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="#download">⬇ 다운로드</a>
-      <a class="btn btn-ghost" href="https://github.com/bunhine0452/uvws" target="_blank" rel="noopener">★ GitHub에서 보기</a>
+      <a class="btn btn-primary" href="#download" data-i18n="hero_cta_dl">⬇ 다운로드</a>
+      <a class="btn btn-ghost" href="https://github.com/bunhine0452/uvws" target="_blank" rel="noopener" data-i18n="hero_cta_gh">★ GitHub에서 보기</a>
     </div>
-    <p class="hero-note">macOS (Apple Silicon · Intel) · Windows 10+ · 무료</p>
+    <p class="hero-note" data-i18n="hero_note">macOS (Apple Silicon · Intel) · Windows 10+ · 무료</p>
   </div>
 </header>
 
 <div class="shot">
   <div class="shot-frame">
     <div class="shot-bar"><span></span><span></span><span></span></div>
-    <img src="preview.png" alt="uvws 앱 화면 — 프로젝트 목록과 실행 중인 서버 로그" />
+    <img src="preview.png" alt="uvws app screenshot" />
   </div>
 </div>
 
 <div class="term">
   <div class="term-box">
-<div class="term-line"><span class="c"># 원래 매번 이렇게 했죠</span></div>
+<div class="term-line" data-i18n="term_c1"><span class="c"># 원래 매번 이렇게 했죠</span></div>
 <div class="term-line"><span class="term-strike">cd ~/projects/comfyui && source .venv/bin/activate && python main.py</span></div>
 <div class="term-line"><span class="term-strike">lsof -i :8188 | grep LISTEN</span></div>
 <div class="term-line"><span class="term-strike">kill -9 48213</span></div>
 <br />
-<div class="term-line"><span class="c"># uvws에선</span></div>
-<div class="term-line"><span class="g">✓</span> 프로젝트 클릭 → 실행  <span class="c">(uv run으로 자동 래핑)</span></div>
-<div class="term-line"><span class="g">✓</span> <span class="p">localhost:8188</span> 감지 → 브라우저 열기 버튼 자동 표시</div>
-<div class="term-line"><span class="g">✓</span> Kill Port 버튼 → 포트가 진짜 비워질 때까지 처리</div>
+<div class="term-line" data-i18n="term_c2"><span class="c"># uvws에선</span></div>
+<div class="term-line" data-i18n="term_n1"><span class="g">✓</span> 프로젝트 클릭 → 실행 <span class="c">(uv run으로 자동 래핑)</span></div>
+<div class="term-line" data-i18n="term_n2"><span class="g">✓</span> <span class="p">localhost:8188</span> 감지 → 브라우저 열기 버튼 자동 표시</div>
+<div class="term-line" data-i18n="term_n3"><span class="g">✓</span> Kill Port 버튼 → 포트가 진짜 비워질 때까지 처리</div>
   </div>
 </div>
 
 <section id="features" class="wrap">
   <span class="eyebrow">FEATURES</span>
-  <h2>매번 반복하던 잔손질을 없앴습니다</h2>
-  <p class="section-sub">로컬에서 파이썬 프로젝트 여러 개 돌리다 보면 쌓이는 그 귀찮음들, 하나씩 정리했어요.</p>
+  <h2 data-i18n="feat_title">매번 반복하던 잔손질을 없앴습니다</h2>
+  <p class="section-sub" data-i18n="feat_sub">로컬에서 파이썬 프로젝트 여러 개 돌리다 보면 쌓이는 그 귀찮음들, 하나씩 정리했어요.</p>
 
   <div class="grid">
     <div class="card">
       <div class="ico">🖱️</div>
-      <h3>원클릭 실행</h3>
-      <p>폴더를 등록하면 그다음부턴 클릭 한 번. 내부적으로 <code>uv run</code>으로 감싸 venv 없이도 동작하고, 없으면 첫 실행 때 자동으로 만들어줍니다.</p>
+      <h3 data-i18n="f1_t">원클릭 실행</h3>
+      <p data-i18n="f1_d">폴더를 등록하면 그다음부턴 클릭 한 번. 내부적으로 <code>uv run</code>으로 감싸 venv 없이도 동작하고, 없으면 첫 실행 때 자동으로 만들어줍니다.</p>
     </div>
     <div class="card">
       <div class="ico">🖥️</div>
-      <h3>내장 터미널</h3>
-      <p>각 프로젝트의 stdout/stderr가 xterm.js 터미널로 실시간 스트리밍. 로그에 localhost 주소가 뜨면 브라우저 열기 버튼이 알아서 나타납니다.</p>
+      <h3 data-i18n="f2_t">내장 터미널</h3>
+      <p data-i18n="f2_d">각 프로젝트의 stdout/stderr가 실시간으로 스트리밍. 로그에 localhost 주소가 뜨면 브라우저 열기 버튼이 알아서 나타납니다.</p>
     </div>
     <div class="card">
       <div class="ico">⚡</div>
-      <h3>포트 강제 종료</h3>
-      <p>포트를 잡고 있는 프로세스를 SIGKILL로 종료하고, 실제로 비워질 때까지 확인합니다. "포트가 이미 사용 중" 에러에 더는 lsof를 칠 필요가 없어요.</p>
+      <h3 data-i18n="f3_t">포트 강제 종료</h3>
+      <p data-i18n="f3_d">포트를 잡고 있는 프로세스를 SIGKILL로 종료하고, 실제로 비워질 때까지 확인합니다. "포트가 이미 사용 중" 에러에 더는 lsof를 칠 필요가 없어요.</p>
     </div>
     <div class="card">
       <div class="ico">🧩</div>
-      <h3>임포트 위저드</h3>
-      <p>requirements.txt나 pyproject.toml이 있는 폴더를 가져올 때 Python 버전(3.10–3.13)을 고르고 의존성 설치까지 한 번에.</p>
+      <h3 data-i18n="f4_t">임포트 위저드</h3>
+      <p data-i18n="f4_d">requirements.txt나 pyproject.toml이 있는 폴더를 가져올 때 Python 버전(3.10–3.13)을 고르고 의존성 설치까지 한 번에.</p>
     </div>
     <div class="card">
       <div class="ico">🔀</div>
-      <h3>동시 실행 & 자동 정리</h3>
-      <p>여러 프로젝트 서버를 동시에 띄우고 각각 독립된 터미널·포트로 관리. 앱을 끄면 돌던 서버가 함께 정리되고, 비정상 종료 시에도 다음 실행에서 청소합니다.</p>
+      <h3 data-i18n="f5_t">동시 실행 & 자동 정리</h3>
+      <p data-i18n="f5_d">여러 프로젝트 서버를 동시에 띄우고 각각 독립된 터미널·포트로 관리. 앱을 끄면 돌던 서버가 함께 정리되고, 비정상 종료 시에도 다음 실행에서 청소합니다.</p>
     </div>
     <div class="card">
       <div class="ico">🌿</div>
-      <h3>Git 통합</h3>
-      <p>프로젝트가 Git 저장소면 브랜치·ahead/behind·변경 파일·최근 커밋을 한눈에 보고, Fetch / Pull / Push를 버튼으로 실행합니다.</p>
+      <h3 data-i18n="f6_t">Git 통합</h3>
+      <p data-i18n="f6_d">프로젝트가 Git 저장소면 브랜치·ahead/behind·변경 파일·최근 커밋을 한눈에 보고, Fetch / Pull / Push를 버튼으로 실행합니다.</p>
     </div>
   </div>
 </section>
@@ -268,40 +379,40 @@
 <section id="download">
   <div class="wrap">
     <span class="eyebrow">DOWNLOAD</span>
-    <h2 style="margin-left:auto;margin-right:auto;">받아서 바로 써보세요</h2>
-    <p class="section-sub" style="margin-left:auto;margin-right:auto;">버튼을 누르면 최신 버전이 <strong>바로 다운로드</strong>됩니다. 깃허브 페이지를 거치지 않아요.</p>
+    <h2 style="margin-left:auto;margin-right:auto;" data-i18n="dl_title">받아서 바로 써보세요</h2>
+    <p class="section-sub" style="margin-left:auto;margin-right:auto;" data-i18n="dl_sub">버튼을 누르면 최신 버전이 <strong>바로 다운로드</strong>됩니다. 깃허브 페이지를 거치지 않아요.</p>
 
-    <div style="text-align:center;">
+    <div>
       <a class="release-notes" id="release-notes-link" href="https://github.com/bunhine0452/uvws/releases/latest" target="_blank" rel="noopener">
-        📋 업데이트 내용 보기 <span class="tag" id="release-tag">최신 릴리스</span> →
+        📋 <span data-i18n="dl_notes">업데이트 내용 보기</span> <span class="tag" id="release-tag">latest</span> →
       </a>
     </div>
 
     <div class="dl-grid">
-      <a class="dl-card" id="dl-mac-arm" href="https://github.com/bunhine0452/uvws/releases/download/v0.2.2/uvws_0.2.2_aarch64.dmg" rel="noopener" download>
+      <a class="dl-card" id="dl-mac-arm" href="https://github.com/bunhine0452/uvws/releases/download/v0.3.0/uvws_0.3.0_aarch64.dmg" rel="noopener" download>
         <div class="dl-os">macOS · Apple Silicon</div>
         <div class="dl-detail">M1 ~ M4 · aarch64.dmg</div>
-        <span class="dl-go">바로 다운로드 →</span>
+        <span class="dl-go" data-i18n="dl_go">바로 다운로드 →</span>
       </a>
-      <a class="dl-card" id="dl-mac-intel" href="https://github.com/bunhine0452/uvws/releases/download/v0.2.2/uvws_0.2.2_x64.dmg" rel="noopener" download>
+      <a class="dl-card" id="dl-mac-intel" href="https://github.com/bunhine0452/uvws/releases/download/v0.3.0/uvws_0.3.0_x64.dmg" rel="noopener" download>
         <div class="dl-os">macOS · Intel</div>
         <div class="dl-detail">x64.dmg</div>
-        <span class="dl-go">바로 다운로드 →</span>
+        <span class="dl-go" data-i18n="dl_go">바로 다운로드 →</span>
       </a>
-      <a class="dl-card" id="dl-win" href="https://github.com/bunhine0452/uvws/releases/download/v0.2.2/uvws_0.2.2_x64-setup.exe" rel="noopener" download>
+      <a class="dl-card" id="dl-win" href="https://github.com/bunhine0452/uvws/releases/download/v0.3.0/uvws_0.3.0_x64-setup.exe" rel="noopener" download>
         <div class="dl-os">Windows 10+</div>
         <div class="dl-detail">x64-setup.exe</div>
-        <span class="dl-go">바로 다운로드 →</span>
+        <span class="dl-go" data-i18n="dl_go">바로 다운로드 →</span>
       </a>
     </div>
 
     <div class="prereq">
-      <h4>⚠️ 먼저 uv가 설치돼 있어야 합니다</h4>
+      <h4 data-i18n="prereq_title">⚠️ 먼저 uv가 설치돼 있어야 합니다</h4>
       <span class="lbl">macOS / Linux</span>
       <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code>
       <span class="lbl">Windows (PowerShell)</span>
       <code>powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code>
-      <span class="lbl">macOS 첫 실행 시 보안 경고가 뜨면 (공증 전이라)</span>
+      <span class="lbl" data-i18n="prereq_gatekeeper">macOS 첫 실행 시 보안 경고가 뜨면 (공증 전이라)</span>
       <code>xattr -cr /Applications/uvws.app</code>
     </div>
   </div>
@@ -309,52 +420,113 @@
 
 <footer>
   <div class="wrap">
-    <span>uvws · MIT License · 개인 사이드 프로젝트입니다</span>
+    <span data-i18n="footer_left">uvws · MIT License · 개인 사이드 프로젝트입니다</span>
     <span>
       <a href="https://github.com/bunhine0452/uvws" target="_blank" rel="noopener">GitHub</a> ·
-      <a href="https://github.com/bunhine0452/uvws/issues" target="_blank" rel="noopener">이슈 / 피드백</a>
+      <a href="https://github.com/bunhine0452/uvws/issues" target="_blank" rel="noopener" data-i18n="footer_issues">이슈 / 피드백</a>
     </span>
   </div>
 </footer>
 
 <script>
-  // 최신 릴리스의 자산(asset)을 GitHub API로 받아 각 버튼이 항상 "최신 버전을 바로
-  // 다운로드"하도록 연결한다. 실패(레이트리밋/오프라인) 시에는 페이지에 박힌
-  // 폴백 직접-다운로드 링크와 릴리스 페이지 링크가 그대로 동작한다.
+  // ── Minimal i18n: swap [data-i18n] innerHTML on language change ──
+  const I18N = {
+    ko: {
+      nav_features: "기능", nav_download: "다운로드",
+      hero_pill: "uv 기반 · Tauri 2 · 오픈소스",
+      hero_title: '파이썬 프로젝트를<br /><span class="accent">클릭 한 번으로</span> 실행',
+      hero_sub: "cd 하고 venv 켜고 python 돌리던 거, 이제 폴더 한 번 등록해두면 끝. 여러 프로젝트를 데스크탑 앱 하나에서 관리하고 실행하세요.",
+      hero_cta_dl: "⬇ 다운로드", hero_cta_gh: "★ GitHub에서 보기",
+      hero_note: "macOS (Apple Silicon · Intel) · Windows 10+ · 무료",
+      term_c1: '<span class="c"># 원래 매번 이렇게 했죠</span>',
+      term_c2: '<span class="c"># uvws에선</span>',
+      term_n1: '<span class="g">✓</span> 프로젝트 클릭 → 실행 <span class="c">(uv run으로 자동 래핑)</span>',
+      term_n2: '<span class="g">✓</span> <span class="p">localhost:8188</span> 감지 → 브라우저 열기 버튼 자동 표시',
+      term_n3: '<span class="g">✓</span> Kill Port 버튼 → 포트가 진짜 비워질 때까지 처리',
+      feat_title: "매번 반복하던 잔손질을 없앴습니다",
+      feat_sub: "로컬에서 파이썬 프로젝트 여러 개 돌리다 보면 쌓이는 그 귀찮음들, 하나씩 정리했어요.",
+      f1_t: "원클릭 실행", f1_d: '폴더를 등록하면 그다음부턴 클릭 한 번. 내부적으로 <code>uv run</code>으로 감싸 venv 없이도 동작하고, 없으면 첫 실행 때 자동으로 만들어줍니다.',
+      f2_t: "내장 터미널", f2_d: "각 프로젝트의 stdout/stderr가 실시간으로 스트리밍. 로그에 localhost 주소가 뜨면 브라우저 열기 버튼이 알아서 나타납니다.",
+      f3_t: "포트 강제 종료", f3_d: '포트를 잡고 있는 프로세스를 SIGKILL로 종료하고, 실제로 비워질 때까지 확인합니다. "포트가 이미 사용 중" 에러에 더는 lsof를 칠 필요가 없어요.',
+      f4_t: "임포트 위저드", f4_d: "requirements.txt나 pyproject.toml이 있는 폴더를 가져올 때 Python 버전(3.10–3.13)을 고르고 의존성 설치까지 한 번에.",
+      f5_t: "동시 실행 & 자동 정리", f5_d: "여러 프로젝트 서버를 동시에 띄우고 각각 독립된 터미널·포트로 관리. 앱을 끄면 돌던 서버가 함께 정리되고, 비정상 종료 시에도 다음 실행에서 청소합니다.",
+      f6_t: "Git 통합", f6_d: "프로젝트가 Git 저장소면 브랜치·ahead/behind·변경 파일·최근 커밋을 한눈에 보고, Fetch / Pull / Push를 버튼으로 실행합니다.",
+      dl_title: "받아서 바로 써보세요",
+      dl_sub: "버튼을 누르면 최신 버전이 <strong>바로 다운로드</strong>됩니다. 깃허브 페이지를 거치지 않아요.",
+      dl_notes: "업데이트 내용 보기", dl_go: "바로 다운로드 →",
+      prereq_title: "⚠️ 먼저 uv가 설치돼 있어야 합니다",
+      prereq_gatekeeper: "macOS 첫 실행 시 보안 경고가 뜨면 (공증 전이라)",
+      footer_left: "uvws · MIT License · 개인 사이드 프로젝트입니다",
+      footer_issues: "이슈 / 피드백",
+    },
+    en: {
+      nav_features: "Features", nav_download: "Download",
+      hero_pill: "Powered by uv · Tauri 2 · Open source",
+      hero_title: 'Run Python projects<br />with <span class="accent">one click</span>',
+      hero_sub: "No more cd, activate venv, run python. Register a folder once and you're done — manage and launch all your projects from a single desktop app.",
+      hero_cta_dl: "⬇ Download", hero_cta_gh: "★ View on GitHub",
+      hero_note: "macOS (Apple Silicon · Intel) · Windows 10+ · Free",
+      term_c1: '<span class="c"># What you used to do every time</span>',
+      term_c2: '<span class="c"># With uvws</span>',
+      term_n1: '<span class="g">✓</span> Click a project → it runs <span class="c">(auto-wrapped with uv run)</span>',
+      term_n2: '<span class="g">✓</span> Detects <span class="p">localhost:8188</span> → shows an "Open in browser" button',
+      term_n3: '<span class="g">✓</span> Kill Port button → keeps going until the port is actually free',
+      feat_title: "We removed the busywork you repeat every time",
+      feat_sub: "All the little annoyances that pile up when you run several Python projects locally — handled, one by one.",
+      f1_t: "One-click run", f1_d: 'Register a folder, then it\'s a single click. Internally wrapped with <code>uv run</code> so it works without a venv — and creates one on first run if missing.',
+      f2_t: "Built-in terminal", f2_d: "Each project's stdout/stderr streams live. When a localhost address shows up in the logs, an \"Open in browser\" button appears automatically.",
+      f3_t: "Force-kill ports", f3_d: 'Kills the process holding a port with SIGKILL and confirms it\'s actually freed. No more typing lsof when you hit "port already in use".',
+      f4_t: "Import wizard", f4_d: "Importing a folder with requirements.txt or pyproject.toml? Pick a Python version (3.10–3.13) and install dependencies in one go.",
+      f5_t: "Concurrent runs & auto-cleanup", f5_d: "Run multiple project servers at once, each with its own terminal and port. Quitting the app cleans up running servers — and orphans are swept on the next launch.",
+      f6_t: "Git integration", f6_d: "If the project is a Git repo, see branch · ahead/behind · changed files · recent commits at a glance, and Fetch / Pull / Push with a button.",
+      dl_title: "Grab it and get going",
+      dl_sub: "Click a button and the latest version <strong>downloads directly</strong> — no detour through GitHub.",
+      dl_notes: "What's new", dl_go: "Download →",
+      prereq_title: "⚠️ You need uv installed first",
+      prereq_gatekeeper: "If macOS shows a security warning on first launch (not yet notarized)",
+      footer_left: "uvws · MIT License · a personal side project",
+      footer_issues: "Issues / Feedback",
+    },
+  };
+
+  function setLang(lang) {
+    if (!I18N[lang]) lang = "ko";
+    document.documentElement.lang = lang;
+    localStorage.setItem("uvws.site.lang", lang);
+    document.querySelectorAll("[data-i18n]").forEach((el) => {
+      const v = I18N[lang][el.getAttribute("data-i18n")];
+      if (v != null) el.innerHTML = v;
+    });
+    document.getElementById("lang-ko").classList.toggle("on", lang === "ko");
+    document.getElementById("lang-en").classList.toggle("on", lang === "en");
+  }
+
+  setLang(localStorage.getItem("uvws.site.lang") || ((navigator.language || "ko").toLowerCase().startsWith("ko") ? "ko" : "en"));
+</script>
+
+<script>
+  // ── Always resolve the latest release assets so downloads track new versions ──
   (async function () {
     const REPO = "bunhine0452/uvws";
-    const pick = (assets, re) => {
-      const a = assets.find((x) => re.test(x.name));
-      return a ? a.browser_download_url : null;
-    };
-    const setHref = (id, url) => {
-      const el = document.getElementById(id);
-      if (el && url) el.href = url;
-    };
+    const pick = (assets, re) => { const a = assets.find((x) => re.test(x.name)); return a ? a.browser_download_url : null; };
+    const setHref = (id, url) => { const el = document.getElementById(id); if (el && url) el.href = url; };
     try {
-      const res = await fetch("https://api.github.com/repos/" + REPO + "/releases/latest", {
-        headers: { Accept: "application/vnd.github+json" },
-      });
+      const res = await fetch("https://api.github.com/repos/" + REPO + "/releases/latest", { headers: { Accept: "application/vnd.github+json" } });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const rel = await res.json();
       const assets = rel.assets || [];
-
       setHref("dl-mac-arm", pick(assets, /aarch64\.dmg$/i));
       setHref("dl-mac-intel", pick(assets, /x64\.dmg$/i));
       setHref("dl-win", pick(assets, /x64-setup\.exe$/i));
-
       const notes = document.getElementById("release-notes-link");
       if (notes && rel.html_url) notes.href = rel.html_url;
       const tagEl = document.getElementById("release-tag");
       if (tagEl && rel.tag_name) tagEl.textContent = rel.tag_name;
-    } catch (e) {
-      /* 폴백 링크 유지 */
-    }
+    } catch (e) { /* keep fallback links */ }
   })();
 </script>
 
-<!-- Vercel Web Analytics — Vercel 대시보드의 Analytics 탭에서 활성화하면
-     이 스크립트가 /_vercel/insights/script.js 를 통해 방문 데이터를 수집한다. -->
+<!-- Vercel Web Analytics -->
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
 </script>
