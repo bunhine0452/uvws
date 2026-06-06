@@ -9,7 +9,8 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   Globe, Copy, Square, Play, Clock, Box, FileCode, Settings, Wrench,
   PackageSearch, FolderOpen, X, RefreshCw, DownloadCloud, FileText, Zap,
-  GitBranch, ArrowUp, ArrowDown, Download, Upload, Languages, History
+  GitBranch, ArrowUp, ArrowDown, Download, Upload, Languages, History,
+  RotateCw, ExternalLink
 } from "lucide-react";
 import TerminalView from "./components/TerminalView";
 import { useI18n } from "./i18n";
@@ -81,12 +82,13 @@ export default function App() {
 
   // New States for About & Smart Import
   const [showAbout, setShowAbout] = useState(false);
-  const [appVersion, setAppVersion] = useState("0.2.2");
+  const [appVersion, setAppVersion] = useState("0.3.0");
   const [setupModalConfig, setSetupModalConfig] = useState<{project: Project, hasReqs: boolean} | null>(null);
   const [setupPythonVer, setSetupPythonVer] = useState("3.12");
   const [setupInstallReqs, setSetupInstallReqs] = useState(true);
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
+  const [isRestarting, setIsRestarting] = useState(false);
 
   // Git state
   const [gitStatus, setGitStatus] = useState<GitStatus | null>(null);
@@ -148,9 +150,6 @@ export default function App() {
   // Installed packages
   const [packages, setPackages] = useState<{name: string; version: string}[]>([]);
   const [loadingPkgs, setLoadingPkgs] = useState(false);
-
-  // Log buffer for copy
-  const logBufferRef = useRef<string>("");
 
   useEffect(() => {
     loadProjects();
@@ -452,6 +451,23 @@ export default function App() {
     }
   };
 
+  // 로컬 서버를 멈췄다가 다시 띄우는 "새로 고침". 코드를 고쳤거나 서버가 멎었을 때
+  // 포트가 풀릴 시간을 두고 재기동한다.
+  const handleRestart = async () => {
+    if (!selectedProjectId || isRestarting) return;
+    setIsRestarting(true);
+    try {
+      await handleStop();
+      // 프로세스 그룹 종료(SIGKILL)와 포트 해제를 기다린다.
+      await new Promise((r) => setTimeout(r, 700));
+      await handleRun();
+    } catch (err) {
+      await message(t("failed_restart", { err: String(err) }), { title: t("error"), kind: "error" });
+    } finally {
+      setIsRestarting(false);
+    }
+  };
+
   const handleSync = async () => {
     if (!selectedProjectId) return;
     const proj = projects.find((p) => p.id === selectedProjectId);
@@ -511,8 +527,14 @@ export default function App() {
     await confirmAndKill(port);
   };
 
-  const handleCopyLog = () => {
-    navigator.clipboard.writeText(logBufferRef.current.replace(/\x1b\[[0-9;]*m/g, "")).catch(() => {});
+  const handleCopyLog = async () => {
+    if (!selectedProjectId) return;
+    try {
+      const logs = await invoke<string>("get_process_logs", { id: selectedProjectId });
+      await navigator.clipboard.writeText(logs.replace(/\x1b\[[0-9;]*m/g, ""));
+    } catch (err) {
+      console.error("Failed to copy log:", err);
+    }
   };
 
   const formatUptime = (s: number): string => {
@@ -619,9 +641,19 @@ export default function App() {
                   <Copy size={14} /> {t("copy_log")}
                 </button>
                 {isRunning ? (
-                  <button className="header-action-btn stop-btn" onClick={handleStop} disabled={isInstalling}>
-                    <Square size={12} fill="currentColor" /> {t("stop")}
-                  </button>
+                  <>
+                    <button
+                      className="header-action-btn restart-btn"
+                      onClick={handleRestart}
+                      disabled={isInstalling || isRestarting}
+                      title={t("restart")}
+                    >
+                      <RotateCw size={13} className={isRestarting ? "spin" : ""} /> {isRestarting ? t("restarting") : t("restart")}
+                    </button>
+                    <button className="header-action-btn stop-btn" onClick={handleStop} disabled={isInstalling || isRestarting}>
+                      <Square size={12} fill="currentColor" /> {t("stop")}
+                    </button>
+                  </>
                 ) : (
                   <button className="header-action-btn run-btn" onClick={handleRun} disabled={isInstalling}>
                     <Play size={12} fill="currentColor" /> {t("run")}
@@ -797,7 +829,7 @@ export default function App() {
                         <button className="deps-sync-btn" onClick={() => selectedProject && fetchPackages(selectedProject.path)} disabled={loadingPkgs}>
                           {loadingPkgs ? t("loading") : <><RefreshCw size={12} /> {t("refresh")}</>}
                         </button>
-                        <button className="deps-sync-btn" style={{ background: 'var(--accent)', color: 'white', borderColor: 'var(--accent)' }} onClick={handleSync} disabled={isBusy}>
+                        <button className="deps-sync-btn" style={{ background: 'var(--gradient-accent)', color: 'white', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.45), 0 4px 16px var(--accent-glow)' }} onClick={handleSync} disabled={isBusy}>
                           {isInstalling ? t("syncing") : <><DownloadCloud size={12} /> {t("sync_now")}</>}
                         </button>
                       </div>
@@ -853,7 +885,7 @@ export default function App() {
                           <button className="deps-sync-btn" onClick={() => runGitAction("git_pull")} disabled={gitBusy || !gitStatus.has_remote}>
                             <Download size={12} /> {t("git_pull")}
                           </button>
-                          <button className="deps-sync-btn" style={{ background: 'var(--accent)', color: 'white', borderColor: 'var(--accent)' }} onClick={() => runGitAction("git_push")} disabled={gitBusy || !gitStatus.has_remote}>
+                          <button className="deps-sync-btn" style={{ background: 'var(--gradient-accent)', color: 'white', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.45), 0 4px 16px var(--accent-glow)' }} onClick={() => runGitAction("git_push")} disabled={gitBusy || !gitStatus.has_remote}>
                             <Upload size={12} /> {t("git_push")}
                           </button>
                         </div>
@@ -1098,6 +1130,13 @@ export default function App() {
                 style={{ width: '100%', justifyContent: 'center' }}
               >
                 {isCheckingUpdate ? t("checking_update") : t("check_update")}
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => openUrl("https://github.com/bunhine0452/uvws/releases/latest").catch(() => {})}
+                style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                <ExternalLink size={13} /> {t("view_release_notes")}
               </button>
               <button className="btn-primary" onClick={() => setShowAbout(false)} style={{ width: '100%' }}>{t("close")}</button>
             </div>

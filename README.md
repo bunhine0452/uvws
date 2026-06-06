@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-  <a href="https://uvws.vercel.app"><b>uvws.vercel.app</b></a>
+  <a href="https://uvws.site"><b>uvws.site</b></a>
 </p>
 
 <p align="center">
@@ -31,7 +31,7 @@ Python 프로젝트가 여러 개라면, 매번 `cd`하고 `source .venv/bin/act
 
 ## 다운로드
 
-[**uvws.vercel.app**](https://uvws.vercel.app) 또는 [**Releases 페이지**](https://github.com/bunhine0452/uvws/releases)에서 바로 받을 수 있습니다.
+[**uvws.site**](https://uvws.site) 또는 [**Releases 페이지**](https://github.com/bunhine0452/uvws/releases)에서 바로 받을 수 있습니다.
 
 | 플랫폼 | 파일 |
 |---|---|

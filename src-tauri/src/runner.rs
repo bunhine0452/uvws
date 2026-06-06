@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 use std::process::Stdio;
 use std::sync::{Arc, Mutex};
-use tokio::io::{AsyncBufReadExt, BufReader};
+use std::time::Duration;
+use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::process::Command;
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 use tauri::{AppHandle, Emitter};
 use serde::Serialize;
 use once_cell::sync::Lazy;
@@ -16,6 +17,83 @@ static PORT_REGEX: Lazy<Regex> = Lazy::new(|| {
     // Match both "http(s)://host:port" and bare "host:port" patterns
     Regex::new(r"(?:https?://)?(?:localhost|127\.0\.0\.1|0\.0\.0\.0|\[::\]):(\d+)").unwrap()
 });
+
+/// 터미널 로그를 프론트엔드로 흘려보낼 때 한 줄씩 IPC 이벤트를 쏘면(emit) 출력이 폭주할 때
+/// 직렬화·디스패치 비용이 누적돼 "진짜 터미널보다 느린" 체감이 생긴다. 대신 짧은 시간 창
+/// 안에 들어온 출력을 모아 한 번에 보내고(배칭), 저장 버퍼도 상한을 둔다.
+const LOG_FLUSH_INTERVAL_MS: u64 = 40;
+const LOG_FLUSH_MAX_BYTES: usize = 64 * 1024;
+const LOG_HISTORY_CAP: usize = 400_000;
+
+/// 누적 로그 저장 버퍼가 너무 커지지 않도록 앞부분을 잘라내며(문자 경계 보존) 덧붙인다.
+fn append_capped(store: &mut String, chunk: &str) {
+    store.push_str(chunk);
+    if store.len() > LOG_HISTORY_CAP {
+        let mut cut = store.len() - LOG_HISTORY_CAP;
+        while cut < store.len() && !store.is_char_boundary(cut) {
+            cut += 1;
+        }
+        store.drain(..cut);
+    }
+}
+
+/// 모아둔 출력을 저장 버퍼에 기록하고 단일 이벤트로 프론트엔드에 전송한다.
+fn flush_pending(app: &AppHandle, id: &str, logs: &Arc<Mutex<String>>, pending: &mut String) {
+    if pending.is_empty() {
+        return;
+    }
+    append_capped(&mut logs.lock().unwrap(), pending);
+    app.emit(&format!("log-stream-{}", id), pending.clone()).ok();
+    pending.clear();
+}
+
+/// 자식 프로세스의 한 스트림(stdout 또는 stderr)을 바이트 청크로 읽어 채널로 흘려보낸다.
+/// 동시에 로그 안에서 로컬 서버 포트를 한 번 탐지해 프론트엔드로 알린다.
+async fn read_stream<R: AsyncRead + Unpin>(
+    mut reader: R,
+    tx: mpsc::UnboundedSender<String>,
+    app: AppHandle,
+    id: String,
+    port: Arc<Mutex<Option<u16>>>,
+) {
+    let mut buf = [0u8; 8192];
+    let mut scan = String::new();
+    let mut port_found = port.lock().unwrap().is_some();
+
+    loop {
+        match reader.read(&mut buf).await {
+            Ok(0) | Err(_) => break,
+            Ok(n) => {
+                let chunk = String::from_utf8_lossy(&buf[..n]).into_owned();
+
+                if !port_found {
+                    scan.push_str(&chunk);
+                    if let Some(p) = PORT_REGEX
+                        .captures(&scan)
+                        .and_then(|c| c.get(1))
+                        .and_then(|m| m.as_str().parse::<u16>().ok())
+                    {
+                        *port.lock().unwrap() = Some(p);
+                        app.emit("process-port", PortPayload { id: id.clone(), port: p }).ok();
+                        port_found = true;
+                        scan = String::new();
+                    } else if scan.len() > 8192 {
+                        // 포트 패턴이 청크 경계에 걸칠 수 있으니 최근 일부만 유지
+                        let mut cut = scan.len() - 4096;
+                        while cut < scan.len() && !scan.is_char_boundary(cut) {
+                            cut += 1;
+                        }
+                        scan.drain(..cut);
+                    }
+                }
+
+                if tx.send(chunk).is_err() {
+                    break;
+                }
+            }
+        }
+    }
+}
 
 #[derive(Clone, Serialize)]
 pub struct StatusPayload {
@@ -116,6 +194,14 @@ pub async fn start_project(
         .args(&uv_args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
+        // stdout이 파이프(=비-TTY)면 파이썬을 비롯한 많은 프로그램이 줄 단위가 아닌
+        // 블록 단위로 버퍼링해 로그가 한참 뒤에 몰아서 나온다("느림"의 핵심 원인).
+        // 버퍼링을 끄고, 비-TTY에서도 색이 유지되도록 강제한다.
+        .env("PYTHONUNBUFFERED", "1")
+        .env("PYTHONIOENCODING", "utf-8")
+        .env("FORCE_COLOR", "1")
+        .env("CLICOLOR_FORCE", "1")
+        .env("PY_COLORS", "1")
         .kill_on_drop(true);
 
     #[cfg(unix)]
@@ -158,76 +244,93 @@ pub async fn start_project(
     let registry_clone = Arc::clone(&registry);
 
     tokio::spawn(async move {
-        let mut stdout_reader = BufReader::new(stdout).lines();
-        let mut stderr_reader = BufReader::new(stderr).lines();
+        // raw 바이트 청크를 모으는 채널. stdout/stderr 리더가 보내고, 단일 flusher가
+        // 짧은 시간 창으로 배칭해 한 번에 emit한다.
+        let (tx, mut rx) = mpsc::unbounded_channel::<String>();
 
-        let id_for_out = id_clone.clone();
+        // ── stdout 리더: 줄 단위가 아니라 바이트 청크로 읽어 진행률 표시(\r)도 보존 ──
+        let tx_out = tx.clone();
         let app_for_out = app_clone.clone();
-        let logs_out = process_logs.clone();
+        let id_for_out = id_clone.clone();
         let port_out = process_port.clone();
         let stdout_handle = tokio::spawn(async move {
-            while let Ok(Some(line)) = stdout_reader.next_line().await {
-                if let Some(caps) = PORT_REGEX.captures(&line) {
-                    if let Some(port_str) = caps.get(1) {
-                        if let Ok(port) = port_str.as_str().parse::<u16>() {
-                            *port_out.lock().unwrap() = Some(port);
-                            app_for_out.emit("process-port", PortPayload { id: id_for_out.clone(), port }).ok();
-                        }
-                    }
-                }
-                let msg = format!("{}\r\n", line);
-                logs_out.lock().unwrap().push_str(&msg);
-                app_for_out.emit(&format!("log-stream-{}", id_for_out), msg).ok();
-            }
+            read_stream(stdout, tx_out, app_for_out, id_for_out, port_out).await;
         });
 
-        let id_for_err = id_clone.clone();
+        // ── stderr 리더 (동일 채널로 병합 → 실제 터미널처럼 자연스러운 인터리빙) ──
+        let tx_err = tx.clone();
         let app_for_err = app_clone.clone();
-        let logs_err = process_logs.clone();
+        let id_for_err = id_clone.clone();
         let port_err = process_port.clone();
         let stderr_handle = tokio::spawn(async move {
-            while let Ok(Some(line)) = stderr_reader.next_line().await {
-                if let Some(caps) = PORT_REGEX.captures(&line) {
-                    if let Some(port_str) = caps.get(1) {
-                        if let Ok(port) = port_str.as_str().parse::<u16>() {
-                            *port_err.lock().unwrap() = Some(port);
-                            app_for_err.emit("process-port", PortPayload { id: id_for_err.clone(), port }).ok();
+            read_stream(stderr, tx_err, app_for_err, id_for_err, port_err).await;
+        });
+
+        // 원본 tx는 버려야 두 리더가 끝났을 때 채널이 닫혀 flusher가 종료된다.
+        drop(tx);
+
+        // ── flusher: 들어온 청크를 모아 40ms 창마다(또는 64KB 누적 시) 한 번에 전송 ──
+        let app_flush = app_clone.clone();
+        let id_flush = id_clone.clone();
+        let logs_flush = process_logs.clone();
+        let flush_handle = tokio::spawn(async move {
+            let mut pending = String::new();
+            let mut ticker = tokio::time::interval(Duration::from_millis(LOG_FLUSH_INTERVAL_MS));
+            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+            loop {
+                tokio::select! {
+                    biased;
+                    maybe = rx.recv() => match maybe {
+                        Some(chunk) => {
+                            pending.push_str(&chunk);
+                            if pending.len() >= LOG_FLUSH_MAX_BYTES {
+                                flush_pending(&app_flush, &id_flush, &logs_flush, &mut pending);
+                            }
                         }
+                        None => {
+                            flush_pending(&app_flush, &id_flush, &logs_flush, &mut pending);
+                            break;
+                        }
+                    },
+                    _ = ticker.tick() => {
+                        flush_pending(&app_flush, &id_flush, &logs_flush, &mut pending);
                     }
                 }
-                let msg = format!("\x1b[31m{}\x1b[0m\r\n", line);
-                logs_err.lock().unwrap().push_str(&msg);
-                app_for_err.emit(&format!("log-stream-{}", id_for_err), msg).ok();
             }
         });
 
         // 프로세스 종료 및 시그널 모니터링
-        tokio::select! {
-            status = child.wait() => {
-                match status {
-                    Ok(exit_status) => {
-                        let exit_msg = format!("\r\n\x1b[38;2;100;100;110m[uvws] Process exited with status: {}\x1b[0m\r\n", exit_status);
-                        process_logs.lock().unwrap().push_str(&exit_msg);
-                        app_clone.emit(&format!("log-stream-{}", id_clone), exit_msg).ok();
-                    }
-                    Err(e) => {
-                        let err_msg = format!("\r\n[uvws] Error waiting for process: {}\r\n", e);
-                        process_logs.lock().unwrap().push_str(&err_msg);
-                        app_clone.emit(&format!("log-stream-{}", id_clone), err_msg).ok();
-                    }
-                }
-            }
+        let exit_note = tokio::select! {
+            status = child.wait() => match status {
+                Ok(exit_status) => format!("\r\n\x1b[38;2;120;120;135m[uvws] Process exited with status: {}\x1b[0m\r\n", exit_status),
+                Err(e) => format!("\r\n[uvws] Error waiting for process: {}\r\n", e),
+            },
             _ = kill_rx => {
                 let _ = child.kill().await;
-                let msg = "\r\n[uvws] Process killed by user.\r\n";
-                process_logs.lock().unwrap().push_str(msg);
-                app_clone.emit(&format!("log-stream-{}", id_clone), msg).ok();
+                "\r\n\x1b[38;2;120;120;135m[uvws] Process stopped by user.\x1b[0m\r\n".to_string()
             }
-        }
+        };
 
-        // 스레드 핸들 강제 종료 및 리소스 반환
-        stdout_handle.abort();
-        stderr_handle.abort();
+        // 남은 출력을 끝까지 비운다(최대 3초 대기). 손주 프로세스가 파이프를 붙들어
+        // 멈추는 경우를 대비해 타임아웃 시 리더를 강제 종료한다.
+        let out_abort = stdout_handle.abort_handle();
+        let err_abort = stderr_handle.abort_handle();
+        if tokio::time::timeout(Duration::from_secs(3), async move {
+            let _ = stdout_handle.await;
+            let _ = stderr_handle.await;
+        })
+        .await
+        .is_err()
+        {
+            out_abort.abort();
+            err_abort.abort();
+        }
+        // 리더가 끝나면 tx가 모두 드롭되어 채널이 닫히고 flusher가 잔여분을 비운 뒤 종료된다.
+        let _ = flush_handle.await;
+
+        // 종료 안내 줄은 모든 로그가 비워진 뒤 마지막에 출력
+        append_capped(&mut process_logs.lock().unwrap(), &exit_note);
+        app_clone.emit(&format!("log-stream-{}", id_clone), exit_note).ok();
 
         // 레지스트리 정리
         {

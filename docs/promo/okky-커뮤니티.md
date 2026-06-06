@@ -24,5 +24,5 @@ Tauri로 만들어서 맥(M1~M4 / 인텔), 윈도우 다 됩니다. 다만 uv는
 
 아직 개인 사이드 프로젝트라 맥 공증은 못 받았고(첫 실행 때 보안 경고 우회 방법은 README에 있습니다), 부족한 점 많을 텐데 써보고 피드백 주시면 정말 감사하겠습니다.
 
-다운로드: https://uvws.vercel.app
+다운로드: https://uvws.site
 깃허브: https://github.com/bunhine0452/uvws
