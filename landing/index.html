@@ -4,17 +4,29 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="color-scheme" content="light dark" />
-<title>uvws — uv 기반 파이썬 프로젝트를 클릭 한 번으로</title>
-<meta name="description" content="파이썬 프로젝트 여러 개를 데스크탑 앱에서 관리하고 클릭 한 번으로 실행하세요. uv 기반, 내장 터미널, 포트 강제 종료, Git 통합. macOS · Windows." />
+<title>uvws — 파이썬 프로젝트 관리 · uv 기반 원클릭 실행 데스크탑 앱</title>
+<meta name="description" content="cd·venv·python 반복 없이 파이썬 프로젝트를 클릭 한 번으로 실행하는 데스크탑 앱. uv 기반, 내장 터미널, 포트 강제 종료(kill port), 여러 프로젝트 동시 실행, Git 통합. ComfyUI·Flask·FastAPI·Streamlit 등 로컬 서버 실행에 딱. macOS · Windows · 무료 오픈소스." />
+<meta name="keywords" content="파이썬 프로젝트 관리, 파이썬 프로젝트 매니저, uv GUI, uv 런처, uv 사용법, astral uv, 파이썬 원클릭 실행, venv 자동화, 가상환경 관리, 포트 강제 종료, kill port, 포트 이미 사용중, 로컬 서버 관리, localhost 관리, ComfyUI 실행, Stable Diffusion 로컬 실행, 로컬 AI 앱 실행, Flask 실행, FastAPI 실행, Streamlit 실행, Django 실행, 파이썬 데스크탑 앱, 맥 파이썬 런처, 윈도우 파이썬 런처, 여러 파이썬 프로젝트 동시 실행, Tauri 앱, 파이썬 GUI 도구, python project manager, python launcher, uv gui launcher, run python one click, kill port mac, comfyui launcher, manage multiple python servers, venv manager" />
+<meta name="author" content="bunhine0452" />
+<meta name="robots" content="index, follow, max-image-preview:large" />
+<meta name="theme-color" content="#0a84ff" />
 <link rel="canonical" href="https://uvws.site/" />
-<meta property="og:title" content="uvws — uv 기반 파이썬 프로젝트를 클릭 한 번으로" />
-<meta property="og:description" content="cd 하고 venv 켜고 python 돌리던 거 끝. 폴더 등록해두면 클릭 한 번으로 실행됩니다." />
+<meta property="og:site_name" content="uvws" />
+<meta property="og:title" content="uvws — 파이썬 프로젝트를 클릭 한 번으로 실행하는 데스크탑 앱" />
+<meta property="og:description" content="cd 하고 venv 켜고 python 돌리던 거 끝. 폴더 등록해두면 클릭 한 번으로 실행됩니다. uv 기반 · 내장 터미널 · 포트 강제 종료 · 여러 프로젝트 동시 실행." />
 <meta property="og:url" content="https://uvws.site/" />
 <meta property="og:image" content="https://uvws.site/preview.png" />
+<meta property="og:image:alt" content="uvws 앱 스크린샷 — 파이썬 프로젝트 목록과 내장 터미널" />
 <meta property="og:type" content="website" />
+<meta property="og:locale" content="ko_KR" />
+<meta property="og:locale:alternate" content="en_US" />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="uvws — 파이썬 프로젝트를 클릭 한 번으로" />
+<meta name="twitter:description" content="uv 기반 파이썬 프로젝트 매니저. 내장 터미널 · 포트 강제 종료 · 여러 프로젝트 동시 실행. macOS · Windows 무료." />
 <meta name="twitter:image" content="https://uvws.site/preview.png" />
+<meta name="twitter:image:alt" content="uvws 앱 스크린샷" />
 <link rel="icon" href="icon.png" />
+<link rel="apple-touch-icon" href="icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -281,10 +293,154 @@
   }
   .prereq .lbl { color: var(--muted); font-size: 12px; font-family: var(--mono); margin-top: 14px; display: block; }
 
+  /* use-cases */
+  .uses { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 32px; }
+  .uses span {
+    font-family: var(--mono); font-size: 13px; color: var(--text-soft);
+    background: var(--glass-fill); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    padding: 8px 14px; border-radius: var(--r-full); box-shadow: var(--elev-sm);
+  }
+
+  /* faq */
+  .faq-list { margin-top: 40px; display: flex; flex-direction: column; gap: 12px; }
+  .faq-list details {
+    background: var(--glass-fill); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur);
+    border-radius: var(--r-md); box-shadow: var(--elev-sm); overflow: hidden;
+    transition: box-shadow .15s;
+  }
+  .faq-list details[open] { box-shadow: var(--elev); }
+  .faq-list summary {
+    cursor: pointer; list-style: none; padding: 19px 22px; font-weight: 700; font-size: 15.5px;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px; letter-spacing: -0.01em;
+  }
+  .faq-list summary::-webkit-details-marker { display: none; }
+  .faq-list summary::after { content: "+"; font-family: var(--mono); font-size: 20px; color: var(--accent); transition: transform .2s; flex: none; }
+  .faq-list details[open] summary::after { transform: rotate(45deg); }
+  .faq-list .faq-a { padding: 0 22px 20px; color: var(--text-soft); font-size: 14.5px; }
+  .faq-list .faq-a code { font-family: var(--mono); font-size: 12.5px; color: var(--accent); background: var(--accent-soft); padding: 1px 6px; border-radius: 6px; }
+
   footer { box-shadow: inset 0 1px 0 var(--hairline); padding: 40px 0; color: var(--muted); font-size: 14px; margin-top: 40px; }
   footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
   footer a:hover { color: var(--text); }
 </style>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://uvws.site/#website",
+      "url": "https://uvws.site/",
+      "name": "uvws",
+      "description": "파이썬 프로젝트를 클릭 한 번으로 실행하는 uv 기반 데스크탑 앱",
+      "inLanguage": ["ko-KR", "en-US"],
+      "publisher": { "@id": "https://uvws.site/#person" }
+    },
+    {
+      "@type": "Person",
+      "@id": "https://uvws.site/#person",
+      "name": "bunhine0452",
+      "url": "https://github.com/bunhine0452"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://uvws.site/#app",
+      "name": "uvws",
+      "alternateName": ["uvws app", "uv workspace", "파이썬 프로젝트 매니저"],
+      "url": "https://uvws.site/",
+      "description": "cd·venv·python 반복 없이 파이썬 프로젝트를 클릭 한 번으로 실행하는 데스크탑 앱. uv 기반, 내장 터미널, 포트 강제 종료(kill port), 여러 프로젝트 동시 실행, Git 통합. ComfyUI·Flask·FastAPI·Streamlit 같은 로컬 서버 실행에 적합합니다.",
+      "applicationCategory": "DeveloperApplication",
+      "applicationSubCategory": "Python project manager / launcher",
+      "operatingSystem": "macOS, Windows",
+      "softwareVersion": "0.3.1",
+      "downloadUrl": "https://github.com/bunhine0452/uvws/releases/latest",
+      "softwareHelp": "https://github.com/bunhine0452/uvws",
+      "license": "https://github.com/bunhine0452/uvws/blob/main/LICENSE",
+      "isAccessibleForFree": true,
+      "screenshot": "https://uvws.site/preview.png",
+      "image": "https://uvws.site/icon.png",
+      "keywords": "파이썬 프로젝트 관리, uv GUI 런처, venv 자동화, 포트 강제 종료, kill port, ComfyUI 실행, 로컬 서버 관리, python project manager, uv launcher",
+      "featureList": [
+        "원클릭 파이썬 프로젝트 실행 (uv run 자동 래핑)",
+        "프로젝트별 내장 터미널 / 실시간 로그 스트리밍",
+        "포트 강제 종료 (kill port) — 포트가 실제로 비워질 때까지 확인",
+        "requirements.txt · pyproject.toml 임포트 위저드 (Python 3.10–3.13)",
+        "여러 프로젝트 동시 실행 및 종료 시 자동 정리",
+        "Git 통합 — 브랜치 / ahead·behind / Fetch·Pull·Push"
+      ],
+      "author": { "@id": "https://uvws.site/#person" },
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://uvws.site/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "uvws는 어떤 앱인가요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "uvws는 로컬 파이썬 프로젝트 여러 개를 데스크탑 앱 하나에서 관리하고 클릭 한 번으로 실행하는 파이썬 프로젝트 매니저입니다. 내부적으로 Astral의 uv(uv run)로 감싸 실행하며, 내장 터미널, 포트 강제 종료, 여러 프로젝트 동시 실행, Git 통합을 제공합니다. macOS와 Windows를 지원하는 무료 오픈소스입니다."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "uv가 무엇인가요? 꼭 설치해야 하나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "uv는 Astral이 만든 매우 빠른 파이썬 패키지·가상환경 관리 도구입니다. uvws는 uv를 백엔드로 사용하므로 먼저 uv를 설치해야 합니다. macOS·Linux는 'curl -LsSf https://astral.sh/uv/install.sh | sh', Windows는 PowerShell에서 'irm https://astral.sh/uv/install.ps1 | iex' 로 설치합니다."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "ComfyUI, Stable Diffusion 같은 로컬 AI 앱도 실행할 수 있나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "네. ComfyUI, Stable Diffusion WebUI 등 파이썬으로 실행되는 로컬 AI 앱을 폴더로 등록해두면 클릭 한 번으로 띄울 수 있습니다. 로그에 localhost 주소가 뜨면 '브라우저 열기' 버튼이 자동으로 나타나고, 포트가 막혀 있으면 Kill Port 버튼으로 비울 수 있습니다."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Flask · FastAPI · Django · Streamlit 같은 웹 프레임워크도 되나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "됩니다. Flask, FastAPI, Django, Streamlit, Gradio 등 로컬 개발 서버를 띄우는 모든 파이썬 프로젝트에 사용할 수 있습니다. 각 프로젝트는 독립된 터미널과 포트로 동시에 실행·관리됩니다."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "'포트가 이미 사용 중'일 때 어떻게 하나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Kill Port(포트 강제 종료) 버튼을 누르면 해당 포트를 잡고 있는 프로세스를 SIGKILL로 종료하고 포트가 실제로 비워질 때까지 확인합니다. lsof나 kill -9 명령을 직접 칠 필요가 없습니다."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "venv(가상환경)를 직접 만들어야 하나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "아니요. uvws가 uv run으로 감싸 실행하므로 venv 활성화 없이 동작하고, 가상환경이 없으면 첫 실행 때 자동으로 만들어 줍니다. requirements.txt나 pyproject.toml이 있으면 임포트 위저드에서 Python 버전(3.10–3.13)을 고르고 의존성까지 한 번에 설치합니다."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "무료인가요? 어떤 OS를 지원하나요?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "무료 오픈소스(MIT)입니다. macOS(Apple Silicon·Intel)와 Windows 10 이상을 지원하며, uvws.site에서 OS에 맞는 설치 파일을 바로 내려받을 수 있습니다."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
 
@@ -293,6 +449,7 @@
     <a class="brand" href="#top"><img src="icon.png" alt="uvws" /> uvws</a>
     <div class="nav-links">
       <a class="hide-sm" href="#features" data-i18n="nav_features">기능</a>
+      <a class="hide-sm" href="#faq" data-i18n="nav_faq">FAQ</a>
       <a class="hide-sm" href="https://github.com/bunhine0452/uvws" target="_blank" rel="noopener">GitHub</a>
       <span class="lang-toggle">
         <button id="lang-ko" onclick="setLang('ko')">한국어</button>
@@ -418,6 +575,61 @@
   </div>
 </section>
 
+<section id="usecases" class="wrap">
+  <span class="eyebrow">USE CASES</span>
+  <h2 data-i18n="uc_title">이런 작업에 잘 맞아요</h2>
+  <p class="section-sub" data-i18n="uc_sub">로컬에서 파이썬 서버를 자주 띄우는 분이라면 거의 다 해당됩니다.</p>
+  <div class="uses">
+    <span data-i18n="uc_1">ComfyUI 실행</span>
+    <span data-i18n="uc_2">Stable Diffusion WebUI</span>
+    <span data-i18n="uc_3">Flask · FastAPI 개발 서버</span>
+    <span data-i18n="uc_4">Streamlit · Gradio 데모</span>
+    <span data-i18n="uc_5">Django 로컬 실행</span>
+    <span data-i18n="uc_6">Jupyter · 데이터 분석 스크립트</span>
+    <span data-i18n="uc_7">디스코드 봇 · 크롤러</span>
+    <span data-i18n="uc_8">여러 파이썬 프로젝트 동시 실행</span>
+    <span data-i18n="uc_9">포트 강제 종료 (kill port)</span>
+    <span data-i18n="uc_10">uv 가상환경 자동 관리</span>
+  </div>
+</section>
+
+<section id="faq" class="wrap">
+  <span class="eyebrow">FAQ</span>
+  <h2 data-i18n="faq_title">자주 묻는 질문</h2>
+  <p class="section-sub" data-i18n="faq_sub">uvws가 무엇이고 어떤 파이썬 작업에 쓰는지 빠르게 정리했습니다.</p>
+
+  <div class="faq-list">
+    <details open>
+      <summary data-i18n="faq_q1">uvws는 어떤 앱인가요?</summary>
+      <div class="faq-a" data-i18n="faq_a1">로컬 파이썬 프로젝트 여러 개를 데스크탑 앱 하나에서 관리하고 클릭 한 번으로 실행하는 <strong>파이썬 프로젝트 매니저</strong>입니다. 내부적으로 Astral의 <code>uv run</code>으로 감싸 실행하며, 내장 터미널·포트 강제 종료·여러 프로젝트 동시 실행·Git 통합을 제공합니다. macOS와 Windows를 지원하는 무료 오픈소스예요.</div>
+    </details>
+    <details>
+      <summary data-i18n="faq_q2">uv가 무엇인가요? 꼭 설치해야 하나요?</summary>
+      <div class="faq-a" data-i18n="faq_a2">uv는 Astral이 만든 아주 빠른 파이썬 패키지·가상환경 관리 도구입니다. uvws는 uv를 백엔드로 쓰기 때문에 먼저 uv를 설치해야 합니다. macOS·Linux는 <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code>, Windows는 PowerShell에서 <code>irm https://astral.sh/uv/install.ps1 | iex</code> 로 설치하세요.</div>
+    </details>
+    <details>
+      <summary data-i18n="faq_q3">ComfyUI, Stable Diffusion 같은 로컬 AI 앱도 실행되나요?</summary>
+      <div class="faq-a" data-i18n="faq_a3">네. ComfyUI, Stable Diffusion WebUI 등 파이썬으로 도는 로컬 AI 앱을 폴더로 등록해두면 클릭 한 번으로 띄울 수 있습니다. 로그에 <code>localhost</code> 주소가 뜨면 '브라우저 열기' 버튼이 자동으로 나타나고, 포트가 막혀 있으면 Kill Port 버튼으로 비웁니다.</div>
+    </details>
+    <details>
+      <summary data-i18n="faq_q4">Flask · FastAPI · Django · Streamlit도 되나요?</summary>
+      <div class="faq-a" data-i18n="faq_a4">됩니다. Flask, FastAPI, Django, Streamlit, Gradio 등 로컬 개발 서버를 띄우는 모든 파이썬 프로젝트에 쓸 수 있어요. 각 프로젝트는 독립된 터미널·포트로 동시에 실행·관리됩니다.</div>
+    </details>
+    <details>
+      <summary data-i18n="faq_q5">'포트가 이미 사용 중'일 때 어떻게 하나요?</summary>
+      <div class="faq-a" data-i18n="faq_a5">Kill Port(포트 강제 종료) 버튼을 누르면 그 포트를 잡고 있는 프로세스를 SIGKILL로 종료하고, 포트가 실제로 비워질 때까지 확인합니다. <code>lsof</code>나 <code>kill -9</code>를 직접 칠 필요가 없어요.</div>
+    </details>
+    <details>
+      <summary data-i18n="faq_q6">venv(가상환경)를 직접 만들어야 하나요?</summary>
+      <div class="faq-a" data-i18n="faq_a6">아니요. uvws가 <code>uv run</code>으로 감싸 실행하므로 venv 활성화 없이 동작하고, 가상환경이 없으면 첫 실행 때 자동으로 만들어 줍니다. requirements.txt나 pyproject.toml이 있으면 임포트 위저드에서 Python 버전(3.10–3.13)을 고르고 의존성까지 한 번에 설치합니다.</div>
+    </details>
+    <details>
+      <summary data-i18n="faq_q7">무료인가요? 어떤 OS를 지원하나요?</summary>
+      <div class="faq-a" data-i18n="faq_a7">무료 오픈소스(MIT)입니다. macOS(Apple Silicon·Intel)와 Windows 10 이상을 지원하고, 위 다운로드 버튼에서 OS에 맞는 설치 파일을 바로 받을 수 있어요.</div>
+    </details>
+  </div>
+</section>
+
 <footer>
   <div class="wrap">
     <span data-i18n="footer_left">uvws · MIT License · 개인 사이드 프로젝트입니다</span>
@@ -432,7 +644,7 @@
   // ── Minimal i18n: swap [data-i18n] innerHTML on language change ──
   const I18N = {
     ko: {
-      nav_features: "기능", nav_download: "다운로드",
+      nav_features: "기능", nav_faq: "FAQ", nav_download: "다운로드",
       hero_pill: "uv 기반 · Tauri 2 · 오픈소스",
       hero_title: '파이썬 프로젝트를<br /><span class="accent">클릭 한 번으로</span> 실행',
       hero_sub: "cd 하고 venv 켜고 python 돌리던 거, 이제 폴더 한 번 등록해두면 끝. 여러 프로젝트를 데스크탑 앱 하나에서 관리하고 실행하세요.",
@@ -456,11 +668,33 @@
       dl_notes: "업데이트 내용 보기", dl_go: "바로 다운로드 →",
       prereq_title: "⚠️ 먼저 uv가 설치돼 있어야 합니다",
       prereq_gatekeeper: "macOS 첫 실행 시 보안 경고가 뜨면 (공증 전이라)",
+      uc_title: "이런 작업에 잘 맞아요",
+      uc_sub: "로컬에서 파이썬 서버를 자주 띄우는 분이라면 거의 다 해당됩니다.",
+      uc_1: "ComfyUI 실행", uc_2: "Stable Diffusion WebUI", uc_3: "Flask · FastAPI 개발 서버",
+      uc_4: "Streamlit · Gradio 데모", uc_5: "Django 로컬 실행", uc_6: "Jupyter · 데이터 분석 스크립트",
+      uc_7: "디스코드 봇 · 크롤러", uc_8: "여러 파이썬 프로젝트 동시 실행", uc_9: "포트 강제 종료 (kill port)",
+      uc_10: "uv 가상환경 자동 관리",
+      faq_title: "자주 묻는 질문",
+      faq_sub: "uvws가 무엇이고 어떤 파이썬 작업에 쓰는지 빠르게 정리했습니다.",
+      faq_q1: "uvws는 어떤 앱인가요?",
+      faq_a1: '로컬 파이썬 프로젝트 여러 개를 데스크탑 앱 하나에서 관리하고 클릭 한 번으로 실행하는 <strong>파이썬 프로젝트 매니저</strong>입니다. 내부적으로 Astral의 <code>uv run</code>으로 감싸 실행하며, 내장 터미널·포트 강제 종료·여러 프로젝트 동시 실행·Git 통합을 제공합니다. macOS와 Windows를 지원하는 무료 오픈소스예요.',
+      faq_q2: "uv가 무엇인가요? 꼭 설치해야 하나요?",
+      faq_a2: 'uv는 Astral이 만든 아주 빠른 파이썬 패키지·가상환경 관리 도구입니다. uvws는 uv를 백엔드로 쓰기 때문에 먼저 uv를 설치해야 합니다. macOS·Linux는 <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code>, Windows는 PowerShell에서 <code>irm https://astral.sh/uv/install.ps1 | iex</code> 로 설치하세요.',
+      faq_q3: "ComfyUI, Stable Diffusion 같은 로컬 AI 앱도 실행되나요?",
+      faq_a3: '네. ComfyUI, Stable Diffusion WebUI 등 파이썬으로 도는 로컬 AI 앱을 폴더로 등록해두면 클릭 한 번으로 띄울 수 있습니다. 로그에 <code>localhost</code> 주소가 뜨면 \'브라우저 열기\' 버튼이 자동으로 나타나고, 포트가 막혀 있으면 Kill Port 버튼으로 비웁니다.',
+      faq_q4: "Flask · FastAPI · Django · Streamlit도 되나요?",
+      faq_a4: "됩니다. Flask, FastAPI, Django, Streamlit, Gradio 등 로컬 개발 서버를 띄우는 모든 파이썬 프로젝트에 쓸 수 있어요. 각 프로젝트는 독립된 터미널·포트로 동시에 실행·관리됩니다.",
+      faq_q5: "'포트가 이미 사용 중'일 때 어떻게 하나요?",
+      faq_a5: 'Kill Port(포트 강제 종료) 버튼을 누르면 그 포트를 잡고 있는 프로세스를 SIGKILL로 종료하고, 포트가 실제로 비워질 때까지 확인합니다. <code>lsof</code>나 <code>kill -9</code>를 직접 칠 필요가 없어요.',
+      faq_q6: "venv(가상환경)를 직접 만들어야 하나요?",
+      faq_a6: "아니요. uvws가 <code>uv run</code>으로 감싸 실행하므로 venv 활성화 없이 동작하고, 가상환경이 없으면 첫 실행 때 자동으로 만들어 줍니다. requirements.txt나 pyproject.toml이 있으면 임포트 위저드에서 Python 버전(3.10–3.13)을 고르고 의존성까지 한 번에 설치합니다.",
+      faq_q7: "무료인가요? 어떤 OS를 지원하나요?",
+      faq_a7: "무료 오픈소스(MIT)입니다. macOS(Apple Silicon·Intel)와 Windows 10 이상을 지원하고, 위 다운로드 버튼에서 OS에 맞는 설치 파일을 바로 받을 수 있어요.",
       footer_left: "uvws · MIT License · 개인 사이드 프로젝트입니다",
       footer_issues: "이슈 / 피드백",
     },
     en: {
-      nav_features: "Features", nav_download: "Download",
+      nav_features: "Features", nav_faq: "FAQ", nav_download: "Download",
       hero_pill: "Powered by uv · Tauri 2 · Open source",
       hero_title: 'Run Python projects<br />with <span class="accent">one click</span>',
       hero_sub: "No more cd, activate venv, run python. Register a folder once and you're done — manage and launch all your projects from a single desktop app.",
@@ -484,6 +718,28 @@
       dl_notes: "What's new", dl_go: "Download →",
       prereq_title: "⚠️ You need uv installed first",
       prereq_gatekeeper: "If macOS shows a security warning on first launch (not yet notarized)",
+      uc_title: "Great for these jobs",
+      uc_sub: "If you spin up local Python servers a lot, almost all of these apply.",
+      uc_1: "Run ComfyUI", uc_2: "Stable Diffusion WebUI", uc_3: "Flask · FastAPI dev servers",
+      uc_4: "Streamlit · Gradio demos", uc_5: "Django locally", uc_6: "Jupyter · data scripts",
+      uc_7: "Discord bots · crawlers", uc_8: "Run many Python projects at once", uc_9: "Kill port (force-free)",
+      uc_10: "Auto-managed uv virtualenvs",
+      faq_title: "Frequently asked questions",
+      faq_sub: "A quick rundown of what uvws is and what Python tasks it's for.",
+      faq_q1: "What is uvws?",
+      faq_a1: 'A <strong>Python project manager</strong> that lets you manage many local Python projects in one desktop app and run them with a single click. It wraps execution in Astral\'s <code>uv run</code> and adds a built-in terminal, force-kill ports, concurrent runs, and Git integration. Free and open source, for macOS and Windows.',
+      faq_q2: "What is uv? Do I have to install it?",
+      faq_a2: 'uv is Astral\'s very fast Python package and virtualenv manager. uvws uses uv as its backend, so install it first: on macOS/Linux run <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code>, on Windows run <code>irm https://astral.sh/uv/install.ps1 | iex</code> in PowerShell.',
+      faq_q3: "Can it launch local AI apps like ComfyUI or Stable Diffusion?",
+      faq_a3: 'Yes. Register the folder of any Python-based local AI app — ComfyUI, Stable Diffusion WebUI, etc. — and launch it in one click. When a <code>localhost</code> address shows in the logs an "Open in browser" button appears, and a blocked port can be freed with Kill Port.',
+      faq_q4: "Does it work with Flask · FastAPI · Django · Streamlit?",
+      faq_a4: "Yes. It works with any Python project that runs a local dev server — Flask, FastAPI, Django, Streamlit, Gradio, and more. Each project runs concurrently with its own terminal and port.",
+      faq_q5: 'What about "port already in use"?',
+      faq_a5: 'Hit the Kill Port button: it SIGKILLs the process holding the port and confirms the port is actually freed — no more typing <code>lsof</code> or <code>kill -9</code> yourself.',
+      faq_q6: "Do I have to create a venv myself?",
+      faq_a6: "No. uvws wraps runs in <code>uv run</code>, so it works without activating a venv and creates one on first run if missing. With a requirements.txt or pyproject.toml, the import wizard lets you pick a Python version (3.10–3.13) and install dependencies in one go.",
+      faq_q7: "Is it free? Which OSes are supported?",
+      faq_a7: "It's free and open source (MIT). It supports macOS (Apple Silicon · Intel) and Windows 10+, and you can grab the installer for your OS from the download buttons above.",
       footer_left: "uvws · MIT License · a personal side project",
       footer_issues: "Issues / Feedback",
     },
