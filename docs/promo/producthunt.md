@@ -30,7 +30,7 @@ GitHub: https://github.com/bunhine0452/uvws
 Developer Tools, Python, Productivity, Mac, Windows
 
 ## Links
-- Website / Download: https://uvws.vercel.app
+- Website / Download: https://uvws.site
 - GitHub: https://github.com/bunhine0452/uvws
 
 ## 갤러리에 올릴 이미지

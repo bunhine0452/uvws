@@ -5,11 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>uvws — uv 기반 파이썬 프로젝트를 클릭 한 번으로</title>
 <meta name="description" content="파이썬 프로젝트 여러 개를 데스크탑 앱에서 관리하고 클릭 한 번으로 실행하세요. uv 기반, 내장 터미널, 포트 강제 종료, Git 통합. macOS · Windows." />
+<link rel="canonical" href="https://uvws.site/" />
 <meta property="og:title" content="uvws — uv 기반 파이썬 프로젝트를 클릭 한 번으로" />
 <meta property="og:description" content="cd 하고 venv 켜고 python 돌리던 거 끝. 폴더 등록해두면 클릭 한 번으로 실행됩니다." />
-<meta property="og:image" content="preview.png" />
+<meta property="og:url" content="https://uvws.site/" />
+<meta property="og:image" content="https://uvws.site/preview.png" />
 <meta property="og:type" content="website" />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="https://uvws.site/preview.png" />
 <link rel="icon" href="icon.png" />
 <style>
   :root {
@@ -143,6 +146,21 @@
   .dl-os { font-weight: 700; font-size: 17px; }
   .dl-detail { color: var(--muted); font-size: 13px; margin-top: 5px; font-family: var(--mono); }
   .dl-go { display: inline-block; margin-top: 16px; color: var(--indigo-bright); font-weight: 600; font-size: 14px; }
+  .dl-ver { font-family: var(--mono); }
+  /* "what's new" / release-notes link */
+  .release-notes {
+    display: inline-flex; align-items: center; gap: 8px;
+    margin: 18px auto 0; padding: 9px 16px; border-radius: 999px;
+    background: var(--bg-soft); border: 1px solid var(--border);
+    color: var(--muted); font-size: 13.5px; font-weight: 600;
+    transition: border-color .15s, color .15s, transform .12s;
+  }
+  .release-notes:hover { border-color: var(--indigo); color: var(--text); transform: translateY(-1px); }
+  .release-notes .tag {
+    font-family: var(--mono); font-size: 12px; color: var(--indigo-bright);
+    background: rgba(99,102,241,0.12); border: 1px solid rgba(99,102,241,0.3);
+    padding: 1px 8px; border-radius: 999px;
+  }
   .prereq {
     margin: 40px auto 0; max-width: 640px; text-align: left;
     background: var(--bg-soft); border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px;
@@ -251,23 +269,29 @@
   <div class="wrap">
     <span class="eyebrow">DOWNLOAD</span>
     <h2 style="margin-left:auto;margin-right:auto;">받아서 바로 써보세요</h2>
-    <p class="section-sub" style="margin-left:auto;margin-right:auto;">최신 릴리스 페이지로 이동합니다. 플랫폼에 맞는 파일을 받으세요.</p>
+    <p class="section-sub" style="margin-left:auto;margin-right:auto;">버튼을 누르면 최신 버전이 <strong>바로 다운로드</strong>됩니다. 깃허브 페이지를 거치지 않아요.</p>
+
+    <div style="text-align:center;">
+      <a class="release-notes" id="release-notes-link" href="https://github.com/bunhine0452/uvws/releases/latest" target="_blank" rel="noopener">
+        📋 업데이트 내용 보기 <span class="tag" id="release-tag">최신 릴리스</span> →
+      </a>
+    </div>
 
     <div class="dl-grid">
-      <a class="dl-card" href="https://github.com/bunhine0452/uvws/releases/latest" target="_blank" rel="noopener">
+      <a class="dl-card" id="dl-mac-arm" href="https://github.com/bunhine0452/uvws/releases/download/v0.2.2/uvws_0.2.2_aarch64.dmg" rel="noopener" download>
         <div class="dl-os">macOS · Apple Silicon</div>
         <div class="dl-detail">M1 ~ M4 · aarch64.dmg</div>
-        <span class="dl-go">다운로드 →</span>
+        <span class="dl-go">바로 다운로드 →</span>
       </a>
-      <a class="dl-card" href="https://github.com/bunhine0452/uvws/releases/latest" target="_blank" rel="noopener">
+      <a class="dl-card" id="dl-mac-intel" href="https://github.com/bunhine0452/uvws/releases/download/v0.2.2/uvws_0.2.2_x64.dmg" rel="noopener" download>
         <div class="dl-os">macOS · Intel</div>
         <div class="dl-detail">x64.dmg</div>
-        <span class="dl-go">다운로드 →</span>
+        <span class="dl-go">바로 다운로드 →</span>
       </a>
-      <a class="dl-card" href="https://github.com/bunhine0452/uvws/releases/latest" target="_blank" rel="noopener">
+      <a class="dl-card" id="dl-win" href="https://github.com/bunhine0452/uvws/releases/download/v0.2.2/uvws_0.2.2_x64-setup.exe" rel="noopener" download>
         <div class="dl-os">Windows 10+</div>
         <div class="dl-detail">x64-setup.exe</div>
-        <span class="dl-go">다운로드 →</span>
+        <span class="dl-go">바로 다운로드 →</span>
       </a>
     </div>
 
@@ -292,6 +316,49 @@
     </span>
   </div>
 </footer>
+
+<script>
+  // 최신 릴리스의 자산(asset)을 GitHub API로 받아 각 버튼이 항상 "최신 버전을 바로
+  // 다운로드"하도록 연결한다. 실패(레이트리밋/오프라인) 시에는 페이지에 박힌
+  // 폴백 직접-다운로드 링크와 릴리스 페이지 링크가 그대로 동작한다.
+  (async function () {
+    const REPO = "bunhine0452/uvws";
+    const pick = (assets, re) => {
+      const a = assets.find((x) => re.test(x.name));
+      return a ? a.browser_download_url : null;
+    };
+    const setHref = (id, url) => {
+      const el = document.getElementById(id);
+      if (el && url) el.href = url;
+    };
+    try {
+      const res = await fetch("https://api.github.com/repos/" + REPO + "/releases/latest", {
+        headers: { Accept: "application/vnd.github+json" },
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const rel = await res.json();
+      const assets = rel.assets || [];
+
+      setHref("dl-mac-arm", pick(assets, /aarch64\.dmg$/i));
+      setHref("dl-mac-intel", pick(assets, /x64\.dmg$/i));
+      setHref("dl-win", pick(assets, /x64-setup\.exe$/i));
+
+      const notes = document.getElementById("release-notes-link");
+      if (notes && rel.html_url) notes.href = rel.html_url;
+      const tagEl = document.getElementById("release-tag");
+      if (tagEl && rel.tag_name) tagEl.textContent = rel.tag_name;
+    } catch (e) {
+      /* 폴백 링크 유지 */
+    }
+  })();
+</script>
+
+<!-- Vercel Web Analytics — Vercel 대시보드의 Analytics 탭에서 활성화하면
+     이 스크립트가 /_vercel/insights/script.js 를 통해 방문 데이터를 수집한다. -->
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
 
 </body>
 </html>
