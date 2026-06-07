@@ -4,6 +4,12 @@ All notable changes per release. The CI injects the section matching the
 release tag (e.g. `## v0.4.0`) into the GitHub release notes and the
 in-app updater notes, so keep headings as `## vX.Y.Z`.
 
+## v0.4.1
+- **Fixed the app icon** — it had a white background plate behind it; the
+  icon is now properly transparent everywhere (app icon and favicons).
+- **Update notifications now render the release notes** instead of showing
+  raw markdown, so you can clearly see what changed.
+
 ## v0.4.0
 - **Share via public link + QR** — expose a running local server through a
   cloudflared quick tunnel in one click. Non-blocking panel with link, QR,
