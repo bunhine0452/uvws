@@ -134,7 +134,6 @@ export default function App() {
   const [killPortInput, setKillPortInput] = useState("");
 
   // Tunnel share (cloudflared 퀵 터널 + QR)
-  const [tunnelAvailable, setTunnelAvailable] = useState<boolean | null>(null);
   const [shareModal, setShareModal] = useState<{ id: string; url?: string; loading: boolean; error?: string } | null>(null);
   const [shareQr, setShareQr] = useState<string | null>(null);
 
@@ -367,11 +366,6 @@ export default function App() {
       unsubMetrics.then((u) => u());
       unsubExit.then((u) => u());
     };
-  }, []);
-
-  // cloudflared 설치 여부 1회 확인
-  useEffect(() => {
-    invoke<boolean>("check_tunnel_available").then(setTunnelAvailable).catch(() => setTunnelAvailable(false));
   }, []);
 
   // 공유 URL이 잡히면 QR 데이터 URL 생성
@@ -646,7 +640,10 @@ export default function App() {
 
   const handleShare = async () => {
     if (!selectedProjectId || !detectedPort) return;
-    if (tunnelAvailable === false) {
+    // 클릭 시점에 라이브로 재확인한다. 앱 실행 중에 cloudflared를 설치한 경우
+    // 시작 시 캐시된 값(false)이 stale일 수 있으므로 매번 새로 확인.
+    const available = await invoke<boolean>("check_tunnel_available").catch(() => false);
+    if (!available) {
       setShareModal({ id: selectedProjectId, loading: false, error: "NO_CLOUDFLARED" });
       return;
     }
