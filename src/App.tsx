@@ -134,8 +134,13 @@ export default function App() {
   const [killPortInput, setKillPortInput] = useState("");
 
   // Tunnel share (cloudflared 퀵 터널 + QR)
-  const [shareModal, setShareModal] = useState<{ id: string; url?: string; loading: boolean; error?: string } | null>(null);
+  // 공유(터널)는 프로젝트별로 독립 유지된다. 패널을 닫아도 공유는 계속됨(중지 버튼으로만 중지).
+  type Share = { url?: string; loading: boolean; error?: string };
+  const [shares, setShares] = useState<Record<string, Share>>({});
+  const [sharePanelOpen, setSharePanelOpen] = useState(false);
   const [shareQr, setShareQr] = useState<string | null>(null);
+  const sharesRef = useRef<Record<string, Share>>({});
+  useEffect(() => { sharesRef.current = shares; }, [shares]);
 
   // 리소스 모니터 (CPU/RAM, ~1Hz). metrics는 매 틱 통째로 교체 → 중지된 프로젝트는 자동 제거.
   const [metrics, setMetrics] = useState<Record<string, { cpu: number; mem: number }>>({});
@@ -316,6 +321,11 @@ export default function App() {
           delete next[e.payload.id];
           return next;
         });
+        // 서버가 멈추면 그 프로젝트의 공유 터널도 함께 정리(죽은 포트로 향하는 orphan 방지)
+        if (sharesRef.current[e.payload.id]) {
+          invoke("stop_tunnel", { id: e.payload.id }).catch(() => {});
+          setShares((s) => { const n = { ...s }; delete n[e.payload.id]; return n; });
+        }
       }
     });
 
@@ -336,13 +346,13 @@ export default function App() {
 
     // ── 공유 터널 이벤트 ──
     const unsubTunnelUrl = listen<{ id: string; url: string }>("tunnel-url", (e) => {
-      setShareModal((m) => (m && m.id === e.payload.id ? { ...m, url: e.payload.url, loading: false } : m));
+      setShares((s) => (s[e.payload.id] ? { ...s, [e.payload.id]: { ...s[e.payload.id], url: e.payload.url, loading: false } } : s));
     });
     const unsubTunnelErr = listen<{ id: string; message: string }>("tunnel-error", (e) => {
-      setShareModal((m) => (m && m.id === e.payload.id ? { ...m, loading: false, error: e.payload.message } : m));
+      setShares((s) => (s[e.payload.id] ? { ...s, [e.payload.id]: { ...s[e.payload.id], loading: false, error: e.payload.message } } : s));
     });
     const unsubTunnelStopped = listen<{ id: string }>("tunnel-stopped", (e) => {
-      setShareModal((m) => (m && m.id === e.payload.id ? null : m));
+      setShares((s) => { if (!s[e.payload.id]) return s; const n = { ...s }; delete n[e.payload.id]; return n; });
     });
 
     // ── 리소스 메트릭(1초 주기 배열) ──
@@ -368,12 +378,12 @@ export default function App() {
     };
   }, []);
 
-  // 공유 URL이 잡히면 QR 데이터 URL 생성
+  // 선택된 프로젝트의 공유 URL이 잡히면 QR 데이터 URL 생성
   useEffect(() => {
-    const url = shareModal?.url;
+    const url = selectedProjectId ? shares[selectedProjectId]?.url : undefined;
     if (!url) { setShareQr(null); return; }
-    QRCode.toDataURL(url, { width: 220, margin: 1 }).then(setShareQr).catch(() => setShareQr(null));
-  }, [shareModal?.url]);
+    QRCode.toDataURL(url, { width: 200, margin: 1 }).then(setShareQr).catch(() => setShareQr(null));
+  }, [shares, selectedProjectId]);
   const loadProjects = async () => {
     try {
       const list: Project[] = await invoke("get_projects");
@@ -640,28 +650,32 @@ export default function App() {
 
   const handleShare = async () => {
     if (!selectedProjectId || !detectedPort) return;
-    // 클릭 시점에 라이브로 재확인한다. 앱 실행 중에 cloudflared를 설치한 경우
-    // 시작 시 캐시된 값(false)이 stale일 수 있으므로 매번 새로 확인.
+    const id = selectedProjectId;
+    // 이미 공유 중이면 패널만 토글(여닫아도 공유는 유지)
+    if (shares[id]) { setSharePanelOpen((o) => !o); return; }
+    // 클릭 시점에 라이브로 재확인(앱 실행 중 설치 시 stale 방지)
     const available = await invoke<boolean>("check_tunnel_available").catch(() => false);
     if (!available) {
-      setShareModal({ id: selectedProjectId, loading: false, error: "NO_CLOUDFLARED" });
+      setShares((s) => ({ ...s, [id]: { loading: false, error: "NO_CLOUDFLARED" } }));
+      setSharePanelOpen(true);
       return;
     }
-    setShareModal({ id: selectedProjectId, loading: true });
+    setShares((s) => ({ ...s, [id]: { loading: true } }));
+    setSharePanelOpen(true);
     try {
-      await invoke("start_tunnel", { id: selectedProjectId, port: detectedPort });
+      await invoke("start_tunnel", { id, port: detectedPort });
     } catch (err) {
-      setShareModal({ id: selectedProjectId, loading: false, error: String(err) });
+      setShares((s) => ({ ...s, [id]: { loading: false, error: String(err) } }));
     }
   };
 
-  const handleStopShare = async () => {
-    const id = shareModal?.id;
-    setShareModal(null);
-    setShareQr(null);
-    if (id) {
-      try { await invoke("stop_tunnel", { id }); } catch { /* ignore */ }
-    }
+  // 공유 중지(터널 종료). 패널 닫기와는 분리되어 있다.
+  const handleStopShare = async (id?: string) => {
+    const pid = id ?? selectedProjectId;
+    if (!pid) return;
+    setShares((s) => { const n = { ...s }; delete n[pid]; return n; });
+    setSharePanelOpen(false);
+    try { await invoke("stop_tunnel", { id: pid }); } catch { /* ignore */ }
   };
 
   const confirmAndKill = async (port: number) => {
@@ -726,6 +740,7 @@ export default function App() {
   const isInstalling = status === "Installing";
   const liveMetric = isRunning && selectedProjectId ? metrics[selectedProjectId] : undefined;
   const liveSpark = isRunning && selectedProjectId ? sparkRef.current[selectedProjectId] : undefined;
+  const activeShare = selectedProjectId ? shares[selectedProjectId] : undefined;
   const isBusy = isRunning || isInstalling;
 
   return (
@@ -836,11 +851,11 @@ export default function App() {
                 </button>
                 {isRunning && detectedPort && (
                   <button
-                    className="header-action-btn share-btn"
+                    className={`header-action-btn share-btn ${activeShare ? "active" : ""}`}
                     onClick={handleShare}
                     title={t("share_title")}
                   >
-                    <Share2 size={13} /> {t("share")}
+                    <Share2 size={13} /> {activeShare ? t("share_active") : t("share")}
                   </button>
                 )}
                 <button className="header-action-btn copy-btn" onClick={handleCopyLog}>
@@ -1345,54 +1360,56 @@ export default function App() {
         </div>
       )}
 
-      {/* Share Modal (cloudflared tunnel + QR) */}
-      {shareModal && (
-        <div className="modal-backdrop" onClick={handleStopShare}>
-          <div className="modal-content share-modal" onClick={(e) => e.stopPropagation()}>
-            <h3><Share2 size={16} /> {t("share_title")}</h3>
-
-            {shareModal.error === "NO_CLOUDFLARED" ? (
-              <div className="share-body">
-                <p className="share-hint">{t("tunnel_unavailable_desc")}</p>
-                <code className="share-install">brew install cloudflared</code>
-                <button
-                  className="btn-secondary"
-                  onClick={() => openUrl("https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/").catch(() => {})}
-                >
-                  <ExternalLink size={13} /> {t("tunnel_install_link")}
-                </button>
-              </div>
-            ) : shareModal.error ? (
-              <div className="share-body">
-                <p className="share-hint share-error">{t("share_failed")}</p>
-                <code className="share-install">{shareModal.error}</code>
-              </div>
-            ) : shareModal.loading || !shareModal.url ? (
-              <div className="share-body">
-                <RefreshCw size={22} className="spin" />
-                <p className="share-hint">{t("share_loading")}</p>
-              </div>
-            ) : (
-              <div className="share-body">
-                {shareQr && <img className="share-qr" src={shareQr} alt="QR" width={220} height={220} />}
-                <p className="share-hint">{t("share_scan_hint")}</p>
-                <code className="share-url">{shareModal.url}</code>
-                <p className="share-warn">{t("share_public_warn")}</p>
-                <div className="modal-actions">
-                  <button className="btn-secondary" onClick={() => navigator.clipboard.writeText(shareModal.url!)}>
-                    <Copy size={13} /> {t("share_copy")}
-                  </button>
-                  <button className="btn-secondary" onClick={() => openUrl(shareModal.url!).catch(() => {})}>
-                    <Globe size={13} /> {t("share_open")}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <button className="btn-primary share-stop" onClick={handleStopShare} style={{ width: "100%" }}>
-              {shareModal.url ? t("share_stop") : t("close")}
+      {/* Share popover — 비차단(백드롭 없음). 닫아도 공유는 유지, 중지 버튼으로만 종료. */}
+      {sharePanelOpen && activeShare && (
+        <div className="share-pop">
+          <div className="share-pop-head">
+            <strong><Share2 size={14} /> {t("share_title")}</strong>
+            <button className="share-pop-x" onClick={() => setSharePanelOpen(false)} title={t("close")}>
+              <X size={15} />
             </button>
           </div>
+
+          {activeShare.error === "NO_CLOUDFLARED" ? (
+            <div className="share-pop-body">
+              <p className="share-hint">{t("tunnel_unavailable_desc")}</p>
+              <code className="share-install">brew install cloudflared</code>
+              <button
+                className="btn-secondary"
+                onClick={() => openUrl("https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/").catch(() => {})}
+              >
+                <ExternalLink size={13} /> {t("tunnel_install_link")}
+              </button>
+            </div>
+          ) : activeShare.error ? (
+            <div className="share-pop-body">
+              <p className="share-hint share-error">{t("share_failed")}</p>
+              <code className="share-install">{activeShare.error}</code>
+            </div>
+          ) : !activeShare.url ? (
+            <div className="share-pop-body">
+              <RefreshCw size={20} className="spin" />
+              <p className="share-hint">{t("share_loading")}</p>
+            </div>
+          ) : (
+            <div className="share-pop-body">
+              {shareQr && <img className="share-qr" src={shareQr} alt="QR" width={180} height={180} />}
+              <code className="share-url">{activeShare.url}</code>
+              <div className="share-pop-actions">
+                <button className="btn-secondary" onClick={() => navigator.clipboard.writeText(activeShare.url!)}>
+                  <Copy size={13} /> {t("share_copy")}
+                </button>
+                <button className="btn-secondary" onClick={() => openUrl(activeShare.url!).catch(() => {})}>
+                  <Globe size={13} /> {t("share_open")}
+                </button>
+              </div>
+              <p className="share-warn">{t("share_public_warn")}</p>
+            </div>
+          )}
+
+          <button className="share-pop-stop" onClick={() => handleStopShare()}>
+            <Square size={11} fill="currentColor" /> {t("share_stop")}
+          </button>
         </div>
       )}
 

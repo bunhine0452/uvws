@@ -2072,32 +2072,55 @@ button:focus:not(:focus-visible) { outline: none; }
 
 /* ─── Share (tunnel + QR) ─── */
 .share-btn:hover:not(:disabled) { color: var(--accent); }
-.share-modal { max-width: 360px; text-align: center; }
-.share-modal h3 { display: inline-flex; align-items: center; gap: 8px; justify-content: center; }
-.share-body {
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
-  margin-bottom: 20px;
+.share-btn.active {
+  background: var(--accent-subtle, rgba(10,132,255,0.12));
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-subtle, rgba(10,132,255,0.25));
 }
-.share-qr {
-  border-radius: var(--radius-md);
-  background: #fff; padding: 10px;
-  box-shadow: var(--elev-glass-sm, 0 6px 18px -6px rgba(22,28,52,0.22));
+
+/* 비차단 플로팅 패널: 백드롭 없음 → 뒤의 앱을 계속 조작할 수 있다. */
+.share-pop {
+  position: fixed; top: 64px; right: 22px; z-index: 60;
+  width: 280px; padding: 14px;
+  display: flex; flex-direction: column; gap: 12px;
+  border-radius: var(--radius-lg);
+  background: var(--glass-fill-strong);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  box-shadow: var(--elev-glass, 0 18px 50px -16px rgba(22,28,52,0.35)), inset 0 0 0 1px var(--border-light, rgba(255,255,255,0.4));
+  animation: sharePopIn 0.16s var(--ease, ease);
 }
-.share-hint { font-size: 13px; color: var(--text-secondary); margin: 0; }
+@keyframes sharePopIn { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: none; } }
+.share-pop-head { display: flex; align-items: center; justify-content: space-between; }
+.share-pop-head strong { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 700; }
+.share-pop-x {
+  border: none; background: transparent; color: var(--text-tertiary); cursor: pointer;
+  display: inline-flex; padding: 3px; border-radius: var(--radius-md); transition: all .12s var(--ease, ease);
+}
+.share-pop-x:hover { color: var(--text-primary); background: var(--glass-fill-active, rgba(255,255,255,0.5)); }
+.share-pop-body { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.share-qr { border-radius: var(--radius-md); background: #fff; padding: 8px; }
+.share-hint { font-size: 12.5px; color: var(--text-secondary); margin: 0; text-align: center; }
 .share-error { color: #e0564f; }
 .share-url {
   display: block; width: 100%; box-sizing: border-box;
-  font-family: var(--font-mono); font-size: 12.5px; color: var(--accent);
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--accent);
   background: var(--accent-subtle, rgba(10,132,255,0.10));
-  border-radius: var(--radius-md); padding: 10px 12px; word-break: break-all;
+  border-radius: var(--radius-md); padding: 9px 11px; word-break: break-all; text-align: center;
 }
 .share-install {
-  font-family: var(--font-mono); font-size: 12.5px; color: var(--text-primary);
-  background: rgba(0,0,0,0.16); border-radius: var(--radius-md); padding: 9px 12px;
+  font-family: var(--font-mono); font-size: 12px; color: var(--text-primary);
+  background: rgba(0,0,0,0.16); border-radius: var(--radius-md); padding: 8px 11px;
 }
-.share-warn { font-size: 11.5px; color: var(--text-tertiary); margin: 0; }
-.share-modal .modal-actions { width: 100%; justify-content: center; }
-.share-stop { margin-top: 4px; }
+.share-warn { font-size: 11px; color: var(--text-tertiary); margin: 0; text-align: center; }
+.share-pop-actions { display: flex; gap: 8px; width: 100%; }
+.share-pop-actions .btn-secondary { flex: 1; justify-content: center; }
+.share-pop-stop {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%; padding: 9px; border: none; cursor: pointer;
+  border-radius: var(--radius-full); font-family: var(--font-sans); font-size: 13px; font-weight: 700;
+  background: rgba(224,86,79,0.14); color: #e0564f; transition: all .12s var(--ease, ease);
+}
+.share-pop-stop:hover { background: rgba(224,86,79,0.22); }
 
 /* ─── Resource monitor sparkline ─── */
 .spark { margin-left: 7px; color: var(--accent); opacity: 0.85; vertical-align: middle; }

@@ -128,6 +128,7 @@ const translations: Record<Lang, Record<string, string>> = {
     enter_port: "종료할 포트 번호를 입력하세요",
     // Share (tunnel + QR)
     share: "공유",
+    share_active: "공유 중",
     share_title: "공개 링크로 공유",
     share_loading: "공개 URL을 만드는 중…",
     share_scan_hint: "폰 카메라로 QR을 스캔하세요",
@@ -281,6 +282,7 @@ const translations: Record<Lang, Record<string, string>> = {
     enter_port: "Enter port number to kill",
     // Share (tunnel + QR)
     share: "Share",
+    share_active: "Sharing",
     share_title: "Share via public link",
     share_loading: "Creating a public URL…",
     share_scan_hint: "Scan the QR with your phone camera",
