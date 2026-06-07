@@ -1,6 +1,7 @@
 mod config;
 mod git;
 mod runner;
+mod tunnel;
 mod uv;
 
 use config::{ConfigManager, Project};
@@ -182,6 +183,10 @@ pub fn run() {
     // 앱 종료 이벤트 핸들러에서 사용할 레지스트리 핸들 (setup으로 move되기 전에 복제)
     let registry_for_exit = Arc::clone(&process_registry);
 
+    // 공유 터널(cloudflared) 레지스트리. 종료 핸들러용 핸들도 미리 복제.
+    let tunnel_registry = Arc::new(tunnel::TunnelRegistry::default());
+    let tunnel_for_exit = Arc::clone(&tunnel_registry);
+
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -205,6 +210,7 @@ pub fn run() {
             *process_registry.pid_file.lock().unwrap() = Some(pid_file);
 
             app.manage(process_registry);
+            app.manage(tunnel_registry);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -226,7 +232,10 @@ pub fn run() {
             git::git_log,
             git::git_fetch,
             git::git_pull,
-            git::git_push
+            git::git_push,
+            tunnel::check_tunnel_available,
+            tunnel::start_tunnel,
+            tunnel::stop_tunnel
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -235,6 +244,7 @@ pub fn run() {
     app.run(move |_app_handle, event| {
         if let tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit = event {
             runner::kill_all_processes(&registry_for_exit);
+            tunnel::kill_all_tunnels(&tunnel_for_exit);
         }
     });
 }

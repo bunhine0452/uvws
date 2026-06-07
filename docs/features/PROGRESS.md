@@ -7,36 +7,36 @@
 
 ## 🧭 현재 상태
 
-- **마지막 업데이트:** 2026-06-07 (계획 문서 최초 작성)
-- **전체 단계:** 설계 완료 ✅ → 구현 시작 전
-- **현재 기능:** (없음 — 아직 시작 안 함)
-- **NEXT ACTION:** 기능 **#1 터널+QR 공유**의 `01-tunnel-qr-share.md`를 열고, 백엔드 첫 체크박스(`check_tunnel_available` 커맨드)부터 시작한다.
+- **마지막 업데이트:** 2026-06-07
+- **전체 단계:** 기능 #1 코드 완료(자동 검증 통과) → 기능 #2 착수 전
+- **현재 기능:** #1 터널+QR 공유 — ✅ 구현 완료 / ⏳ cloudflared 설치 후 수동 E2E만 남음
+- **NEXT ACTION:** 기능 **#2 리소스 모니터**의 `02-resource-monitor.md`를 열고, 백엔드 첫 체크박스(`Cargo.toml`에 `sysinfo` 추가 → `lib.rs` 샘플러 태스크)부터 시작한다.
 
 > 구현 순서 권장: **1 → 2 → 4 → 9** (1·2는 runner 확장, 4는 1·2의 이벤트와 잘 묶임, 9는 독립적이라 마지막/병렬 가능).
 
 ---
 
 ## 기능 #1 — 터널 + QR 공유  (`01-tunnel-qr-share.md`)
-상태: ⬜ 시작 전
+상태: ✅ 코드 완료 (수동 E2E만 남음)
 
 ### 백엔드 (`src-tauri/src/tunnel.rs` 신규 + lib.rs)
-- [ ] `tunnel.rs` 모듈 생성 + `TunnelRegistry` 상태 정의, `lib.rs`에서 `mod tunnel;` + `app.manage(...)`
-- [ ] `check_tunnel_available() -> bool` (cloudflared PATH 감지)
-- [ ] `start_tunnel(id, port)` — cloudflared 스폰, `https://*.trycloudflare.com` 파싱 → `tunnel-url` 이벤트
-- [ ] `stop_tunnel(id)` — 터널 프로세스 종료
-- [ ] `stop_project`/`kill_all_processes`에서 해당 프로젝트 터널도 함께 정리
-- [ ] `lib.rs` `invoke_handler!`에 3개 커맨드 등록
+- [x] `tunnel.rs` 모듈 생성 + `TunnelRegistry` 상태 정의, `lib.rs`에서 `mod tunnel;` + `app.manage(...)`
+- [x] `check_tunnel_available() -> bool` (cloudflared 절대경로 우선 + which 폴백)
+- [x] `start_tunnel(id, port)` — cloudflared 스폰, `https://*.trycloudflare.com` 파싱 → `tunnel-url` 이벤트(+ `tunnel-error`/`tunnel-stopped`, 25s 타임아웃)
+- [x] `stop_tunnel(id)` — 터널 프로세스(그룹) 종료
+- [x] 앱 종료 시 `tunnel::kill_all_tunnels`로 정리(`lib.rs` exit 핸들러). ※프로젝트 Stop 시 정리는 프론트에서 stop_tunnel 호출로 처리(설계대로)
+- [x] `lib.rs` `invoke_handler!`에 3개 커맨드 등록
 
 ### 프론트엔드
-- [ ] `qrcode` npm 패키지 추가
-- [ ] "Share" 버튼(헤더, open_in_browser 근처) — running + port 있을 때만
-- [ ] 공유 모달: URL + QR + 복사 + "공유 중지" + cloudflared 미설치 안내
-- [ ] `tunnel-url` listen, 상태 관리(projectId → url)
-- [ ] i18n 키(ko/en)
+- [x] `qrcode` + `@types/qrcode` 추가
+- [x] "Share" 버튼(헤더) — `isRunning && detectedPort`일 때만
+- [x] 공유 모달: QR + URL + 복사/열기 + "공유 중지" + cloudflared 미설치 안내 + 공개 경고
+- [x] `tunnel-url`/`tunnel-error`/`tunnel-stopped` listen, QR 생성 useEffect
+- [x] i18n 키(ko/en) 11종
 
 ### 검증
-- [ ] cargo check + npm run build 통과
-- [ ] (수동) 서버 실행 → Share → trycloudflare URL/QR → 폰에서 로드 → 중지
+- [x] cargo check (경고 0) + npm run build 통과
+- [ ] (수동) 서버 실행 → Share → trycloudflare URL/QR → 폰에서 로드 → 중지  ※**이 머신엔 cloudflared 미설치** → 설치 후 확인 필요. (미설치 시 모달이 설치 안내를 띄우는 graceful 경로는 코드상 처리됨)
 
 ---
 
@@ -108,4 +108,5 @@
 
 ## 변경 로그 (append-only, 최신이 위)
 
+- 2026-06-07 — **기능 #1 코드 완료.** `src-tauri/src/tunnel.rs` 신규(check/start/stop_tunnel, tunnel-url/error/stopped 이벤트, 앱종료 정리), lib.rs 등록. App.tsx Share 버튼+모달+QR(qrcode)+리스너, i18n 11키, App.css 스타일. cargo check/npm build 통과. cloudflared 미설치라 수동 E2E는 보류.
 - 2026-06-07 — 계획 문서 6종 작성(MASTER_PROMPT, PROGRESS, 01/02/04/09). 구현 미착수.
