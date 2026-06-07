@@ -51,6 +51,18 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
+      - name: Extract release notes from CHANGELOG
+        id: notes
+        shell: bash
+        run: |
+          ver="${{ github.ref_name }}"
+          body="$(awk -v t="## ${ver}" '$0==t{f=1;next} /^## /{if(f)exit} f' CHANGELOG.md)"
+          {
+            echo "body<<__CHANGELOG_EOF__"
+            echo "$body"
+            echo "__CHANGELOG_EOF__"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -61,6 +73,9 @@ jobs:
           releaseName: 'uvws ${{ github.ref_name }}'
           releaseBody: |
             ## uvws ${{ github.ref_name }}
+
+            ### ✨ What's new
+            ${{ steps.notes.outputs.body }}
 
             ### Downloads
             | Platform | File |

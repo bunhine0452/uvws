@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getVersion } from "@tauri-apps/api/app";
-import { check } from "@tauri-apps/plugin-updater";
+import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { open as openDialog, ask, message } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -91,6 +91,54 @@ function Spark({ data, w = 56, h = 16 }: { data: number[]; w?: number; h?: numbe
   );
 }
 
+// 릴리스 노트(마크다운 일부) 인라인: **굵게**, `코드`, [링크](url)
+function mdInline(s: string, kp: string): ReactNode[] {
+  const out: ReactNode[] = [];
+  const re = /(\*\*([^*]+)\*\*)|(`([^`]+)`)|(\[([^\]]+)\]\((https?:\/\/[^)]+)\))/;
+  let rest = s, i = 0;
+  for (;;) {
+    const m = rest.match(re);
+    if (!m || m.index === undefined) { out.push(rest); break; }
+    if (m.index > 0) out.push(rest.slice(0, m.index));
+    if (m[2]) out.push(<strong key={`${kp}b${i++}`}>{m[2]}</strong>);
+    else if (m[4]) out.push(<code key={`${kp}c${i++}`}>{m[4]}</code>);
+    else if (m[6]) out.push(<a key={`${kp}a${i++}`} href={m[7]} onClick={(e) => { e.preventDefault(); openUrl(m[7]!).catch(() => {}); }}>{m[6]}</a>);
+    rest = rest.slice(m.index + m[0].length);
+  }
+  return out;
+}
+
+// 릴리스 노트를 간단히 렌더: 제목/불릿/문단/표 행 (네이티브 다이얼로그의 날것 마크다운 대체)
+function Markdown({ text }: { text: string }) {
+  const lines = (text || "").replace(/\r\n/g, "\n").split("\n");
+  const blocks: ReactNode[] = [];
+  let bullets: string[] = [];
+  const flush = () => {
+    if (bullets.length) {
+      const items = bullets, bi = blocks.length;
+      blocks.push(<ul className="md-ul" key={`ul${bi}`}>{items.map((b, i) => <li key={i}>{mdInline(b, `ul${bi}_${i}`)}</li>)}</ul>);
+      bullets = [];
+    }
+  };
+  lines.forEach((raw) => {
+    const line = raw.trim();
+    if (/^[-*]\s+/.test(line)) { bullets.push(line.replace(/^[-*]\s+/, "")); return; }
+    flush();
+    if (line === "") return;
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { blocks.push(<div className={`md-h md-h${h[1].length}`} key={`h${blocks.length}`}>{mdInline(h[2], `h${blocks.length}`)}</div>); return; }
+    if (/^\|.*\|$/.test(line)) {
+      if (/^\|[\s:|-]+\|$/.test(line)) return; // 표 구분선 스킵
+      const cells = line.replace(/^\||\|$/g, "").split("|").map((c) => c.trim()).filter(Boolean).join("  ·  ");
+      blocks.push(<div className="md-tr" key={`tr${blocks.length}`}>{mdInline(cells, `tr${blocks.length}`)}</div>);
+      return;
+    }
+    blocks.push(<p key={`p${blocks.length}`}>{mdInline(line, `p${blocks.length}`)}</p>);
+  });
+  flush();
+  return <>{blocks}</>;
+}
+
 type TabId = "config" | "env" | "deps" | "git";
 
 export default function App() {
@@ -132,6 +180,11 @@ export default function App() {
   // Kill-port modal (manual entry when no port detected)
   const [killPortModalOpen, setKillPortModalOpen] = useState(false);
   const [killPortInput, setKillPortInput] = useState("");
+
+  // Update modal (커스텀 — 릴리스 노트를 마크다운 렌더)
+  const [updateInfo, setUpdateInfo] = useState<{ version: string; notes: string } | null>(null);
+  const [pendingUpdate, setPendingUpdate] = useState<Update | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   // Tunnel share (cloudflared 퀵 터널 + QR)
   // 공유(터널)는 프로젝트별로 독립 유지된다. 패널을 닫아도 공유는 계속됨(중지 버튼으로만 중지).
@@ -217,15 +270,10 @@ export default function App() {
       const update = await check();
 
       if (update) {
-        const yes = await ask(
-          t("update_prompt", { v: update.version, body: update.body || "" }),
-          { title: t("update_available"), kind: "info" }
-        );
-
-        if (yes) {
-          await update.downloadAndInstall();
-          await relaunch();
-        }
+        // 네이티브 다이얼로그(평문) 대신 커스텀 모달로 릴리스 노트를 렌더한다.
+        setPendingUpdate(update);
+        setUpdateInfo({ version: update.version, notes: update.body || "" });
+        setShowAbout(false);
       } else {
         await message(t("update_none"), { title: t("update_none_title"), kind: "info" });
       }
@@ -233,6 +281,18 @@ export default function App() {
       await message(t("update_error", { err: String(error) }), { title: t("error"), kind: "error" });
     } finally {
       setIsCheckingUpdate(false);
+    }
+  };
+
+  const installPendingUpdate = async () => {
+    if (!pendingUpdate) return;
+    setIsUpdating(true);
+    try {
+      await pendingUpdate.downloadAndInstall();
+      await relaunch();
+    } catch (error) {
+      setIsUpdating(false);
+      await message(t("update_error", { err: String(error) }), { title: t("error"), kind: "error" });
     }
   };
 
@@ -769,7 +829,7 @@ export default function App() {
           <PanelLeftClose size={15} />
         </button>
         <div className="sidebar-brand" onClick={() => setShowAbout(true)} style={{ cursor: "pointer" }}>
-          <img src="/icons/128x128.png" alt="uvws icon" width="34" height="34" style={{ borderRadius: 'var(--radius-md)', flexShrink: 0, boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }} />
+          <img src="/icons/128x128.png" alt="uvws icon" width="34" height="34" style={{ flexShrink: 0, filter: 'drop-shadow(0 2px 7px rgba(20,30,60,0.22))' }} />
           <div className="sidebar-brand-text">
             <h2>uvws</h2>
             <span>{t("workspace_subtitle")}</span>
@@ -1440,11 +1500,33 @@ export default function App() {
         </div>
       )}
 
+      {/* Update Modal — 릴리스 노트를 마크다운 렌더 */}
+      {updateInfo && (
+        <div className="modal-backdrop" onClick={() => !isUpdating && setUpdateInfo(null)}>
+          <div className="modal-content update-modal" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <DownloadCloud size={18} /> {t("update_available")} · v{updateInfo.version}
+            </h3>
+            <div className="update-notes">
+              {updateInfo.notes.trim()
+                ? <Markdown text={updateInfo.notes} />
+                : <p style={{ color: 'var(--text-tertiary)' }}>{t("update_no_notes")}</p>}
+            </div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setUpdateInfo(null)} disabled={isUpdating}>{t("later")}</button>
+              <button className="btn-primary" onClick={installPendingUpdate} disabled={isUpdating}>
+                {isUpdating ? <><RefreshCw size={13} className="spin" /> {t("updating")}</> : <><DownloadCloud size={13} /> {t("update_now")}</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* About Modal */}
       {showAbout && (
         <div className="modal-backdrop" onClick={() => setShowAbout(false)}>
           <div className="modal-content about-modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', padding: 44 }}>
-            <img src="/icons/128x128.png" alt="uvws icon" width="56" height="56" style={{ marginBottom: 24, borderRadius: 16, display: 'block', margin: '0 auto 24px', boxShadow: '0 4px 24px rgba(0,0,0,0.15)' }} />
+            <img src="/icons/128x128.png" alt="uvws icon" width="56" height="56" style={{ display: 'block', margin: '0 auto 24px', filter: 'drop-shadow(0 4px 16px rgba(20,30,60,0.22))' }} />
             <h2 style={{ margin: '0 0 6px 0', color: 'var(--text-primary)', fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px' }}>uvws</h2>
             <p style={{ margin: '0 0 6px 0', color: 'var(--text-tertiary)', fontSize: 12, fontWeight: 600, letterSpacing: '0.5px', textTransform: 'uppercase' as const }}>{t("version_beta", { v: appVersion })}</p>
             <p style={{ lineHeight: 1.7, color: 'var(--text-secondary)', fontSize: 13, margin: '16px 0 24px', maxWidth: 340, marginLeft: 'auto', marginRight: 'auto' }}>
