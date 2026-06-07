@@ -8,9 +8,9 @@
 ## 🧭 현재 상태
 
 - **마지막 업데이트:** 2026-06-07
-- **전체 단계:** 기능 #1·#2·#4·#9 **전부 코드 완료** ✅ (자동 검증 통과)
-- **현재 기능:** 없음 — 4종 모두 코드 완료. 남은 건 **런타임 수동 E2E**뿐.
-- **NEXT ACTION:** `pnpm tauri dev`로 실제 동작 확인. ① 터널은 `brew install cloudflared` 후 테스트. ② 리소스 모니터/알림/의존성 닥터는 바로 확인 가능. 확인되면 각 기능의 "(수동)" 체크박스를 닫고, 필요 시 버전 범프 후 릴리스.
+- **전체 단계:** 기능 #1·#2·#4·#9 **완료 + 검증 + 릴리스** ✅ (사용자 런타임 검증 완료, v0.4.0 태그 push, CI 빌드 중)
+- **현재 기능:** 없음 — 4종 모두 출시. 공유 UX는 비차단 팝오버로 재설계됨, 새 무배경 아이콘 적용.
+- **NEXT ACTION:** 릴리스 CI(run 27081579908) 완료 후 `latest.json`이 v0.4.0으로 올라왔는지 검증. (이후 후속: 기능 #1 cloudflared 사이드카 번들, #9 pip-audit 취약점 점검 등 2차 항목)
 
 > 구현 순서 권장: **1 → 2 → 4 → 9** (1·2는 runner 확장, 4는 1·2의 이벤트와 잘 묶임, 9는 독립적이라 마지막/병렬 가능).
 
@@ -108,6 +108,7 @@
 
 ## 변경 로그 (append-only, 최신이 위)
 
+- 2026-06-07 — **v0.4.0 릴리스.** 사용자 런타임 검증 완료. 추가 작업: 공유 UX를 비차단 팝오버로 재설계(닫아도 공유 유지, 중지 버튼, 서버 종료 시 자동 정리), cloudflared 라이브 재확인 fix, 새 무배경 아이콘 전체 교체. 버전 0.3.1→0.4.0(4파일+Cargo.lock), main push, 태그 v0.4.0 push → Release CI 빌드 중.
 - 2026-06-07 — **기능 #9 코드 완료(= 4종 전부 완료).** lib.rs에 `list_outdated`/`upgrade_package`/`upgrade_all`(uv 래퍼) + 핸들러 등록. App.tsx deps 탭: "업데이트 확인" 버튼, 업데이트 카드(현재→최신 테이블, 행별/전체 업그레이드, 배지, 프로젝트 전환 초기화), i18n 10키. cargo check/npm build 통과.
 - 2026-06-07 — **기능 #4 코드 완료.** Cargo `tauri-plugin-notification`, lib.rs plugin init, capability `notification:default`. runner.rs `process-exit{id,code,by_user}` 이벤트. App.tsx: 권한요청, `fireNotify`(포커스 시 생략), process-port→준비 알림 / process-exit→크래시 알림(ref로 stale 방지), About 토글, i18n. cargo check/npm build 통과.
 - 2026-06-07 — **기능 #2 코드 완료.** `Cargo.toml` sysinfo 0.33, `lib.rs`에 `metrics_sampler`(1초 주기, 루트+자식 CPU/메모리 합산, `process-metrics` emit). App.tsx: metrics 상태+sparkRef, `Spark`/`formatBytes`, stats-bar에 CPU·MEM 칩, i18n cpu/memory, `.spark` CSS. cargo check/npm build 통과.
