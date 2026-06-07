@@ -2101,3 +2101,11 @@ button:focus:not(:focus-visible) { outline: none; }
 
 /* ─── Resource monitor sparkline ─── */
 .spark { margin-left: 7px; color: var(--accent); opacity: 0.85; vertical-align: middle; }
+
+/* ─── Notifications toggle (About) ─── */
+.about-toggle {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; font-size: 13px; color: var(--text-secondary);
+  padding: 6px 2px; cursor: pointer; user-select: none;
+}
+.about-toggle input { accent-color: var(--accent); cursor: pointer; width: 16px; height: 16px; }

@@ -6,6 +6,7 @@ import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { open as openDialog, ask, message } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
 import QRCode from "qrcode";
 import {
   Globe, Copy, Square, Play, Clock, Box, FileCode, Settings, Wrench,
@@ -141,6 +142,26 @@ export default function App() {
   const [metrics, setMetrics] = useState<Record<string, { cpu: number; mem: number }>>({});
   const sparkRef = useRef<Record<string, number[]>>({});
 
+  // 네이티브 알림 (준비됨/크래시). 전역 리스너에서 stale 클로저를 피하려고 ref로 최신값 보관.
+  const [notifyEnabled, setNotifyEnabled] = useState<boolean>(() => localStorage.getItem("uvws.notify") !== "0");
+  const notifyEnabledRef = useRef(notifyEnabled);
+  const projectsRef = useRef(projects);
+  const tRef = useRef(t);
+  useEffect(() => { notifyEnabledRef.current = notifyEnabled; localStorage.setItem("uvws.notify", notifyEnabled ? "1" : "0"); }, [notifyEnabled]);
+  useEffect(() => { projectsRef.current = projects; }, [projects]);
+  useEffect(() => { tRef.current = t; }, [t]);
+
+  // 알림 권한 요청(최초 1회)
+  useEffect(() => { (async () => {
+    try { if (!(await isPermissionGranted())) await requestPermission(); } catch { /* ignore */ }
+  })(); }, []);
+
+  const fireNotify = async (title: string, body: string) => {
+    if (!notifyEnabledRef.current) return;
+    if (document.hasFocus()) return; // 창이 떠 있으면 생략(노이즈 방지)
+    try { if (await isPermissionGranted()) sendNotification({ title, body }); } catch { /* ignore */ }
+  };
+
   useEffect(() => {
     getVersion().then(setAppVersion).catch(() => {});
   }, []);
@@ -260,6 +281,17 @@ export default function App() {
 
     const unsubPort = listen<{ id: string; port: number }>("process-port", (e) => {
       setProjectPorts((prev) => ({ ...prev, [e.payload.id]: e.payload.port }));
+      const nm = projectsRef.current.find((p) => p.id === e.payload.id)?.name ?? e.payload.id;
+      fireNotify(tRef.current("notif_ready_title"), tRef.current("notif_ready_body", { name: nm, port: e.payload.port }));
+    });
+
+    // 비정상 종료(크래시) 알림 — 사용자가 Stop 안 했고 exit code ≠ 0일 때만
+    const unsubExit = listen<{ id: string; code: number | null; by_user: boolean }>("process-exit", (e) => {
+      const { id, code, by_user } = e.payload;
+      if (!by_user && code !== 0 && code !== null) {
+        const nm = projectsRef.current.find((p) => p.id === id)?.name ?? id;
+        fireNotify(tRef.current("notif_crash_title"), tRef.current("notif_crash_body", { name: nm, code }));
+      }
     });
 
     // ── 공유 터널 이벤트 ──
@@ -292,6 +324,7 @@ export default function App() {
       unsubTunnelErr.then((u) => u());
       unsubTunnelStopped.then((u) => u());
       unsubMetrics.then((u) => u());
+      unsubExit.then((u) => u());
     };
   }, []);
 
@@ -1333,6 +1366,10 @@ export default function App() {
               >
                 <ExternalLink size={13} /> {t("view_release_notes")}
               </button>
+              <label className="about-toggle">
+                <span>{t("settings_notifications")}</span>
+                <input type="checkbox" checked={notifyEnabled} onChange={(e) => setNotifyEnabled(e.target.checked)} />
+              </label>
               <button className="btn-primary" onClick={() => setShowAbout(false)} style={{ width: '100%' }}>{t("close")}</button>
             </div>
           </div>

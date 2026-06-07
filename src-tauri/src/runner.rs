@@ -107,6 +107,15 @@ pub struct PortPayload {
     pub port: u16,
 }
 
+#[derive(Clone, Serialize)]
+pub struct ExitPayload {
+    pub id: String,
+    /// 프로세스 종료 코드. 사용자 종료/시그널 종료 시에는 None.
+    pub code: Option<i32>,
+    /// 사용자가 Stop으로 끝냈는지 여부(크래시 알림 제외용).
+    pub by_user: bool,
+}
+
 pub struct RunningProcess {
     pub pid: u32,
     /// 드롭되면 oneshot 채널이 닫혀 모니터링 태스크의 kill_rx가 깨어나
@@ -299,15 +308,27 @@ pub async fn start_project(
             }
         });
 
-        // 프로세스 종료 및 시그널 모니터링
-        let exit_note = tokio::select! {
+        // 프로세스 종료 및 시그널 모니터링 (종료 코드/사용자 종료 여부도 함께 캡처)
+        let (exit_note, exit_code, exit_by_user): (String, Option<i32>, bool) = tokio::select! {
             status = child.wait() => match status {
-                Ok(exit_status) => format!("\r\n\x1b[38;2;120;120;135m[uvws] Process exited with status: {}\x1b[0m\r\n", exit_status),
-                Err(e) => format!("\r\n[uvws] Error waiting for process: {}\r\n", e),
+                Ok(exit_status) => (
+                    format!("\r\n\x1b[38;2;120;120;135m[uvws] Process exited with status: {}\x1b[0m\r\n", exit_status),
+                    exit_status.code(),
+                    false,
+                ),
+                Err(e) => (
+                    format!("\r\n[uvws] Error waiting for process: {}\r\n", e),
+                    None,
+                    false,
+                ),
             },
             _ = kill_rx => {
                 let _ = child.kill().await;
-                "\r\n\x1b[38;2;120;120;135m[uvws] Process stopped by user.\x1b[0m\r\n".to_string()
+                (
+                    "\r\n\x1b[38;2;120;120;135m[uvws] Process stopped by user.\x1b[0m\r\n".to_string(),
+                    None,
+                    true,
+                )
             }
         };
 
@@ -342,6 +363,8 @@ pub async fn start_project(
         }
         registry_clone.persist();
 
+        // 크래시 판별용 신호(준비됨/크래시 알림은 프론트가 이 이벤트로 발사)
+        app_clone.emit("process-exit", ExitPayload { id: id_clone.clone(), code: exit_code, by_user: exit_by_user }).ok();
         app_clone.emit("process-status", StatusPayload { id: id_clone.clone(), status: "Stopped".to_string() }).ok();
     });
 
