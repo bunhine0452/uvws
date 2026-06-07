@@ -2098,3 +2098,6 @@ button:focus:not(:focus-visible) { outline: none; }
 .share-warn { font-size: 11.5px; color: var(--text-tertiary); margin: 0; }
 .share-modal .modal-actions { width: 100%; justify-content: center; }
 .share-stop { margin-top: 4px; }
+
+/* ─── Resource monitor sparkline ─── */
+.spark { margin-left: 7px; color: var(--accent); opacity: 0.85; vertical-align: middle; }

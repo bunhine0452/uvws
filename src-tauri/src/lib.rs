@@ -5,10 +5,64 @@ mod tunnel;
 mod uv;
 
 use config::{ConfigManager, Project};
+use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use tauri::{Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::process::Command as TokioCommand;
+
+/// 실행 중인 프로젝트의 리소스 사용량 1틱 페이로드.
+#[derive(Clone, Serialize)]
+struct MetricPayload {
+    id: String,
+    cpu: f32,        // CPU 사용률(%) — 코어 합산이라 100%를 넘을 수 있음
+    mem_bytes: u64,  // 메모리(바이트)
+}
+
+/// 1초마다 활성 프로세스(+직접 자식)의 CPU/메모리를 모아 `process-metrics`로 emit한다.
+/// uv가 그룹 리더로 뜨고 python이 직접 자식으로 돌기 때문에, 루트 PID와 그 자식들을
+/// 합산해야 실제 사용량에 가깝다(더 깊은 손주는 과소집계 — 추후 개선 여지).
+async fn metrics_sampler(app: AppHandle, registry: Arc<runner::ProcessRegistry>) {
+    use sysinfo::{Pid, ProcessRefreshKind, ProcessesToUpdate, System};
+
+    let mut sys = System::new();
+    let mut ticker = tokio::time::interval(std::time::Duration::from_secs(1));
+    loop {
+        ticker.tick().await;
+
+        // 활성 (id, pid) 스냅샷
+        let targets: Vec<(String, u32)> = {
+            let active = registry.active_processes.lock().unwrap();
+            active.iter().map(|(id, p)| (id.clone(), p.pid)).collect()
+        };
+        if targets.is_empty() {
+            continue;
+        }
+
+        // CPU/메모리만 갱신(전체 프로세스 — 자식 합산을 위해 필요)
+        sys.refresh_processes_specifics(
+            ProcessesToUpdate::All,
+            true,
+            ProcessRefreshKind::nothing().with_cpu().with_memory(),
+        );
+
+        let mut payload = Vec::with_capacity(targets.len());
+        for (id, pid) in targets {
+            let root = Pid::from_u32(pid);
+            let mut cpu = 0.0f32;
+            let mut mem = 0u64;
+            for (ppid, proc_) in sys.processes() {
+                if *ppid == root || proc_.parent() == Some(root) {
+                    cpu += proc_.cpu_usage();
+                    mem += proc_.memory();
+                }
+            }
+            payload.push(MetricPayload { id, cpu, mem_bytes: mem });
+        }
+
+        app.emit("process-metrics", payload).ok();
+    }
+}
 
 struct AppState {
     config_manager: Mutex<ConfigManager>,
@@ -208,6 +262,11 @@ pub fn run() {
                 .join("uvws_running_pids.json");
             runner::cleanup_orphans(&pid_file);
             *process_registry.pid_file.lock().unwrap() = Some(pid_file);
+
+            // 리소스 모니터: 1초 주기 샘플러를 백그라운드로 띄운다(레지스트리 관리 전에 핸들 복제).
+            let metrics_registry = Arc::clone(&process_registry);
+            let metrics_app = app.handle().clone();
+            tauri::async_runtime::spawn(metrics_sampler(metrics_app, metrics_registry));
 
             app.manage(process_registry);
             app.manage(tunnel_registry);

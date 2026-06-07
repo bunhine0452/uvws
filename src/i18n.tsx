@@ -27,6 +27,8 @@ const translations: Record<Lang, Record<string, string>> = {
     uptime: "가동 시간",
     env: "환경",
     python: "Python",
+    cpu: "CPU",
+    memory: "메모리",
     // Tabs
     tab_config: "구성",
     tab_env: "환경변수",
@@ -172,6 +174,8 @@ const translations: Record<Lang, Record<string, string>> = {
     uptime: "Uptime",
     env: "Env",
     python: "Python",
+    cpu: "CPU",
+    memory: "Memory",
     tab_config: "Configuration",
     tab_env: "Environment",
     tab_deps: "Dependencies",

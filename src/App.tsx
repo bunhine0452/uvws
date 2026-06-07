@@ -11,7 +11,7 @@ import {
   Globe, Copy, Square, Play, Clock, Box, FileCode, Settings, Wrench,
   PackageSearch, FolderOpen, X, RefreshCw, DownloadCloud, FileText, Zap,
   GitBranch, ArrowUp, ArrowDown, Download, Upload, Languages, History,
-  RotateCw, ExternalLink, PanelLeftClose, PanelLeftOpen, Share2
+  RotateCw, ExternalLink, PanelLeftClose, PanelLeftOpen, Share2, Cpu, MemoryStick
 } from "lucide-react";
 import TerminalView from "./components/TerminalView";
 import { useI18n } from "./i18n";
@@ -69,6 +69,27 @@ function shortenPath(p: string): string {
   return shortened;
 }
 
+function formatBytes(b: number): string {
+  if (!b) return "—";
+  if (b < 1024 * 1024) return `${(b / 1024).toFixed(0)} KB`;
+  if (b < 1024 * 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(0)} MB`;
+  return `${(b / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+/** 의존성 없이 그리는 미니 스파크라인(최근 CPU 샘플). */
+function Spark({ data, w = 56, h = 16 }: { data: number[]; w?: number; h?: number }) {
+  if (data.length < 2) return null;
+  const max = Math.max(1, ...data);
+  const pts = data
+    .map((v, i) => `${((i / (data.length - 1)) * w).toFixed(1)},${(h - (v / max) * h).toFixed(1)}`)
+    .join(" ");
+  return (
+    <svg className="spark" width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden="true">
+      <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 type TabId = "config" | "env" | "deps" | "git";
 
 export default function App() {
@@ -115,6 +136,10 @@ export default function App() {
   const [tunnelAvailable, setTunnelAvailable] = useState<boolean | null>(null);
   const [shareModal, setShareModal] = useState<{ id: string; url?: string; loading: boolean; error?: string } | null>(null);
   const [shareQr, setShareQr] = useState<string | null>(null);
+
+  // 리소스 모니터 (CPU/RAM, ~1Hz). metrics는 매 틱 통째로 교체 → 중지된 프로젝트는 자동 제거.
+  const [metrics, setMetrics] = useState<Record<string, { cpu: number; mem: number }>>({});
+  const sparkRef = useRef<Record<string, number[]>>({});
 
   useEffect(() => {
     getVersion().then(setAppVersion).catch(() => {});
@@ -248,12 +273,25 @@ export default function App() {
       setShareModal((m) => (m && m.id === e.payload.id ? null : m));
     });
 
+    // ── 리소스 메트릭(1초 주기 배열) ──
+    const unsubMetrics = listen<{ id: string; cpu: number; mem_bytes: number }[]>("process-metrics", (e) => {
+      const next: Record<string, { cpu: number; mem: number }> = {};
+      for (const m of e.payload) {
+        next[m.id] = { cpu: m.cpu, mem: m.mem_bytes };
+        const buf = (sparkRef.current[m.id] ??= []);
+        buf.push(m.cpu);
+        if (buf.length > 40) buf.shift();
+      }
+      setMetrics(next);
+    });
+
     return () => {
       unsubStatus.then((u) => u());
       unsubPort.then((u) => u());
       unsubTunnelUrl.then((u) => u());
       unsubTunnelErr.then((u) => u());
       unsubTunnelStopped.then((u) => u());
+      unsubMetrics.then((u) => u());
     };
   }, []);
 
@@ -615,6 +653,8 @@ export default function App() {
   const detectedPort = selectedProject ? projectPorts[selectedProject.id] : null;
   const isRunning = status === "Running";
   const isInstalling = status === "Installing";
+  const liveMetric = isRunning && selectedProjectId ? metrics[selectedProjectId] : undefined;
+  const liveSpark = isRunning && selectedProjectId ? sparkRef.current[selectedProjectId] : undefined;
   const isBusy = isRunning || isInstalling;
 
   return (
@@ -770,6 +810,15 @@ export default function App() {
               <div className="stat-chip">
                 <span className="stat-chip-icon"><FileCode size={13} /></span>
                 {t("python")} {pythonVersion || "—"}
+              </div>
+              <div className="stat-chip">
+                <span className="stat-chip-icon"><Cpu size={13} /></span>
+                {t("cpu")} {liveMetric ? `${liveMetric.cpu.toFixed(0)}%` : "—"}
+                {liveSpark && liveSpark.length > 1 && <Spark data={liveSpark} />}
+              </div>
+              <div className="stat-chip">
+                <span className="stat-chip-icon"><MemoryStick size={13} /></span>
+                {t("memory")} {liveMetric ? formatBytes(liveMetric.mem) : "—"}
               </div>
             </div>
 
