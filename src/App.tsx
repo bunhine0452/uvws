@@ -162,6 +162,47 @@ export default function App() {
     try { if (await isPermissionGranted()) sendNotification({ title, body }); } catch { /* ignore */ }
   };
 
+  // 의존성 닥터: 구버전 점검 + 1클릭 업그레이드
+  const [outdated, setOutdated] = useState<{ name: string; version: string; latest_version: string }[] | null>(null);
+  const [checkingOutdated, setCheckingOutdated] = useState(false);
+  const [upgrading, setUpgrading] = useState<string | null>(null); // "ALL" | 패키지명 | null
+  useEffect(() => { setOutdated(null); }, [selectedProjectId]); // 프로젝트 전환 시 초기화
+
+  const checkOutdated = async (path: string) => {
+    setCheckingOutdated(true);
+    try {
+      setOutdated(await invoke<{ name: string; version: string; latest_version: string }[]>("list_outdated", { path }));
+    } catch (err) {
+      await message(t("failed_generic", { err: String(err) }), { title: t("error"), kind: "error" });
+    } finally {
+      setCheckingOutdated(false);
+    }
+  };
+  const doUpgrade = async (path: string, name: string) => {
+    setUpgrading(name);
+    try {
+      await invoke("upgrade_package", { path, name });
+      await checkOutdated(path);
+      await fetchPackages(path);
+    } catch (err) {
+      await message(t("failed_generic", { err: String(err) }), { title: t("error"), kind: "error" });
+    } finally {
+      setUpgrading(null);
+    }
+  };
+  const doUpgradeAll = async (path: string, names: string[]) => {
+    setUpgrading("ALL");
+    try {
+      await invoke("upgrade_all", { path, names });
+      await checkOutdated(path);
+      await fetchPackages(path);
+    } catch (err) {
+      await message(t("failed_generic", { err: String(err) }), { title: t("error"), kind: "error" });
+    } finally {
+      setUpgrading(null);
+    }
+  };
+
   useEffect(() => {
     getVersion().then(setAppVersion).catch(() => {});
   }, []);
@@ -1003,6 +1044,9 @@ export default function App() {
                         </span>
                       </div>
                       <div style={{ display: "flex", gap: 8 }}>
+                        <button className="deps-sync-btn" onClick={() => selectedProject && checkOutdated(selectedProject.path)} disabled={checkingOutdated || !hasVenv}>
+                          {checkingOutdated ? t("checking_updates") : <><ArrowUp size={12} /> {t("check_updates")}</>}
+                        </button>
                         <button className="deps-sync-btn" onClick={() => selectedProject && fetchPackages(selectedProject.path)} disabled={loadingPkgs}>
                           {loadingPkgs ? t("loading") : <><RefreshCw size={12} /> {t("refresh")}</>}
                         </button>
@@ -1040,6 +1084,57 @@ export default function App() {
                       </div>
                     )}
                   </div>
+
+                  {outdated !== null && (
+                    <div className="deps-card" style={{ marginTop: 14 }}>
+                      <div className="deps-header">
+                        <div>
+                          <h3 style={{ display: 'flex', alignItems: 'center', gap: 6 }}><ArrowUp size={16} /> {t("updates_title")}</h3>
+                          <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
+                            {outdated.length > 0 ? t("updates_available", { n: outdated.length }) : t("up_to_date")}
+                          </span>
+                        </div>
+                        {outdated.length > 0 && (
+                          <button
+                            className="deps-sync-btn"
+                            style={{ background: 'var(--gradient-accent)', color: 'white', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.45), 0 4px 16px var(--accent-glow)' }}
+                            onClick={() => selectedProject && doUpgradeAll(selectedProject.path, outdated.map((o) => o.name))}
+                            disabled={!!upgrading}
+                          >
+                            {upgrading === "ALL" ? t("upgrading") : <><DownloadCloud size={12} /> {t("upgrade_all")}</>}
+                          </button>
+                        )}
+                      </div>
+                      {outdated.length > 0 && (
+                        <div className="deps-table-wrap">
+                          <table className="deps-table">
+                            <thead>
+                              <tr>
+                                <th>{t("pkg_package")}</th>
+                                <th>{t("col_current")}</th>
+                                <th>{t("col_latest")}</th>
+                                <th></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {outdated.map((o, i) => (
+                                <tr key={i}>
+                                  <td className="deps-pkg-name">{o.name}</td>
+                                  <td className="deps-pkg-ver">{o.version}</td>
+                                  <td className="deps-pkg-ver" style={{ color: 'var(--accent)' }}>{o.latest_version}</td>
+                                  <td style={{ textAlign: 'right' }}>
+                                    <button className="deps-sync-btn" onClick={() => selectedProject && doUpgrade(selectedProject.path, o.name)} disabled={!!upgrading}>
+                                      {upgrading === o.name ? t("upgrading") : t("upgrade")}
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

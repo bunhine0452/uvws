@@ -231,6 +231,71 @@ async fn setup_project_env(path: String, python_version: String, install_reqs: b
     Ok(())
 }
 
+/// 업데이트 가능한(구버전) 패키지 목록: uv pip list --outdated --format json
+/// 각 항목 예: { "name", "version"(현재), "latest_version", "latest_filetype" }
+#[tauri::command]
+async fn list_outdated(path: String) -> Result<Vec<serde_json::Value>, String> {
+    let venv_path = Path::new(&path).join(".venv");
+    if !venv_path.exists() {
+        return Ok(vec![]);
+    }
+
+    let output = TokioCommand::new("uv")
+        .current_dir(&path)
+        .args(["pip", "list", "--outdated", "--format", "json"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to list outdated packages: {}", e))?;
+
+    if output.status.success() {
+        let json_str = String::from_utf8_lossy(&output.stdout);
+        Ok(serde_json::from_str(&json_str).unwrap_or_default())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+/// 단일 패키지를 최신으로 업그레이드: uv pip install --upgrade <name>
+#[tauri::command]
+async fn upgrade_package(path: String, name: String) -> Result<String, String> {
+    let output = TokioCommand::new("uv")
+        .current_dir(&path)
+        .args(["pip", "install", "--upgrade", &name])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to upgrade {}: {}", name, e))?;
+
+    if output.status.success() {
+        Ok(format!("{} upgraded", name))
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
+/// 여러 패키지를 한 번에 업그레이드: uv pip install --upgrade <names...>
+#[tauri::command]
+async fn upgrade_all(path: String, names: Vec<String>) -> Result<String, String> {
+    if names.is_empty() {
+        return Ok("nothing to upgrade".to_string());
+    }
+
+    let mut args: Vec<String> = vec!["pip".into(), "install".into(), "--upgrade".into()];
+    args.extend(names.iter().cloned());
+
+    let output = TokioCommand::new("uv")
+        .current_dir(&path)
+        .args(&args)
+        .output()
+        .await
+        .map_err(|e| format!("Failed to upgrade packages: {}", e))?;
+
+    if output.status.success() {
+        Ok(format!("{} packages upgraded", names.len()))
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let process_registry = Arc::new(runner::ProcessRegistry::default());
@@ -283,6 +348,9 @@ pub fn run() {
             list_dependencies,
             check_requirements_exists,
             setup_project_env,
+            list_outdated,
+            upgrade_package,
+            upgrade_all,
             runner::start_project,
             runner::stop_project,
             runner::sync_project_dependencies,
