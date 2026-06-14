@@ -4,6 +4,13 @@ All notable changes per release. The CI injects the section matching the
 release tag (e.g. `## v0.4.0`) into the GitHub release notes and the
 in-app updater notes, so keep headings as `## vX.Y.Z`.
 
+## v0.5.1
+- **Fixed "Open Folder"** — the button failed with "Not allowed to open path"
+  because the opener path scope was empty. It now opens any project folder in
+  your OS file manager.
+- **Download page polish** — all four download cards (macOS ×2, Windows, Linux)
+  now sit on one row, each with its OS logo.
+
 ## v0.5.0
 - **Linux support** — uvws now builds and runs on Linux. Releases ship
   `.AppImage` (auto-updatable), `.deb`, and `.rpm`. (See the first-launch note
