@@ -5,7 +5,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { open as openDialog, ask, message } from "@tauri-apps/plugin-dialog";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openUrl, openPath } from "@tauri-apps/plugin-opener";
 import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
 import QRCode from "qrcode";
 import {
@@ -153,13 +153,19 @@ export default function App() {
 
   // New States for About & Smart Import
   const [showAbout, setShowAbout] = useState(false);
-  const [appVersion, setAppVersion] = useState("0.4.1");
+  const [appVersion, setAppVersion] = useState("0.5.0");
   const [setupModalConfig, setSetupModalConfig] = useState<{project: Project, hasReqs: boolean} | null>(null);
   const [setupPythonVer, setSetupPythonVer] = useState("3.12");
   const [setupInstallReqs, setSetupInstallReqs] = useState(true);
   const [isSettingUp, setIsSettingUp] = useState(false);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [isRestarting, setIsRestarting] = useState(false);
+
+  // uv 설치 게이트 — uv 없이는 앱이 무용지물이므로 시작 시 감지해 안내/원클릭 설치를 제공한다.
+  const [uvStatus, setUvStatus] = useState<{ installed: boolean; version: string | null } | null>(null);
+  const [installingUv, setInstallingUv] = useState(false);
+  const [uvInstallError, setUvInstallError] = useState<string | null>(null);
+  const [uvGateDismissed, setUvGateDismissed] = useState(false);
 
   // Sidebar collapse: pinned-open vs collapsed (with hover-to-peek when collapsed)
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
@@ -321,6 +327,34 @@ export default function App() {
   useEffect(() => {
     loadProjects();
   }, []);
+
+  // 시작 시 uv 설치 여부 확인(게이트 표시 판단용)
+  const refreshUvStatus = useCallback(async () => {
+    try {
+      const s = await invoke<{ installed: boolean; version: string | null }>("check_uv");
+      setUvStatus(s);
+      return s;
+    } catch {
+      const s = { installed: false, version: null };
+      setUvStatus(s);
+      return s;
+    }
+  }, []);
+  useEffect(() => { refreshUvStatus(); }, [refreshUvStatus]);
+
+  const handleInstallUv = async () => {
+    setInstallingUv(true);
+    setUvInstallError(null);
+    try {
+      await invoke("install_uv");
+      const s = await refreshUvStatus();
+      if (!s.installed) setUvInstallError(t("uv_install_failed"));
+    } catch (err) {
+      setUvInstallError(String(err));
+    } finally {
+      setInstallingUv(false);
+    }
+  };
 
   // Uptime timer
   useEffect(() => {
@@ -708,6 +742,17 @@ export default function App() {
     }
   };
 
+  // 프로젝트 경로 폴더를 OS 파일 관리자(Finder/탐색기/파일 매니저)에서 연다.
+  const handleOpenFolder = async () => {
+    const proj = projects.find((p) => p.id === selectedProjectId);
+    if (!proj) return;
+    try {
+      await openPath(editPath || proj.path);
+    } catch (err) {
+      await message(t("failed_open_folder", { err: String(err) }), { title: t("error"), kind: "error" });
+    }
+  };
+
   const handleShare = async () => {
     if (!selectedProjectId || !detectedPort) return;
     const id = selectedProjectId;
@@ -918,6 +963,9 @@ export default function App() {
                     <Share2 size={13} /> {activeShare ? t("share_active") : t("share")}
                   </button>
                 )}
+                <button className="header-action-btn folder-btn" onClick={handleOpenFolder} title={t("open_folder")}>
+                  <FolderOpen size={14} /> {t("open_folder")}
+                </button>
                 <button className="header-action-btn copy-btn" onClick={handleCopyLog}>
                   <Copy size={14} /> {t("copy_log")}
                 </button>
@@ -1300,6 +1348,10 @@ export default function App() {
             <div className="empty-state-icon"><FolderOpen size={48} strokeWidth={1.5} /></div>
             <p>{t("no_projects")}</p>
             <p className="muted">{t("no_projects_hint")}</p>
+            <button className="btn-primary" onClick={() => setShowAddModal(true)} style={{ marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <FolderOpen size={15} /> {t("empty_add_first")}
+            </button>
+            <p className="muted" style={{ marginTop: 20, fontSize: 12, maxWidth: 420, lineHeight: 1.7, textAlign: 'center' }}>{t("empty_examples")}</p>
           </div>
         )}
       </main>
@@ -1523,6 +1575,47 @@ export default function App() {
       )}
 
       {/* About Modal */}
+      {/* ═══ uv 설치 게이트 — uv 미설치 시 원클릭 설치 안내 ═══ */}
+      {uvStatus && !uvStatus.installed && !uvGateDismissed && (
+        <div className="modal-backdrop">
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440, textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, margin: '0 auto 18px', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent-subtle)', color: 'var(--accent)' }}>
+              <Zap size={28} />
+            </div>
+            <h3 style={{ margin: '0 0 8px' }}>{t("uv_required_title")}</h3>
+            <p className="muted" style={{ lineHeight: 1.7, fontSize: 13, margin: '0 0 20px' }}>{t("uv_required_desc")}</p>
+
+            <button
+              className="btn-primary"
+              onClick={handleInstallUv}
+              disabled={installingUv}
+              style={{ width: '100%', justifyContent: 'center', display: 'flex', alignItems: 'center', gap: 8 }}
+            >
+              {installingUv
+                ? (<><RefreshCw size={15} className="spin" /> {t("uv_installing")}</>)
+                : (<><DownloadCloud size={15} /> {t("uv_install_btn")}</>)}
+            </button>
+
+            {uvInstallError && (
+              <p style={{ color: 'var(--red)', fontSize: 12, marginTop: 12, whiteSpace: 'pre-wrap', textAlign: 'left' }}>{uvInstallError}</p>
+            )}
+
+            <div style={{ marginTop: 18, textAlign: 'left' }}>
+              <p className="muted" style={{ fontSize: 12, margin: '0 0 6px' }}>{t("uv_manual_hint")}</p>
+              <code style={{ display: 'block', padding: '10px 12px', borderRadius: 10, background: 'var(--bg-input)', fontSize: 12, fontFamily: 'var(--font-mono)', wordBreak: 'break-all' }}>
+                curl -LsSf https://astral.sh/uv/install.sh | sh
+              </code>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+              <button className="btn-secondary" onClick={() => refreshUvStatus()} style={{ flex: 1, justifyContent: 'center' }}>{t("uv_recheck")}</button>
+              <button className="btn-secondary" onClick={() => openUrl("https://docs.astral.sh/uv/getting-started/installation/").catch(() => {})} style={{ flex: 1, justifyContent: 'center' }}>{t("uv_docs")}</button>
+            </div>
+            <button className="btn-secondary" onClick={() => setUvGateDismissed(true)} style={{ marginTop: 10, width: '100%', justifyContent: 'center', fontSize: 12, opacity: 0.7 }}>{t("uv_continue_anyway")}</button>
+          </div>
+        </div>
+      )}
+
       {showAbout && (
         <div className="modal-backdrop" onClick={() => setShowAbout(false)}>
           <div className="modal-content about-modal" onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center', padding: 44 }}>
@@ -1532,6 +1625,12 @@ export default function App() {
             <p style={{ lineHeight: 1.7, color: 'var(--text-secondary)', fontSize: 13, margin: '16px 0 24px', maxWidth: 340, marginLeft: 'auto', marginRight: 'auto' }}>
               {t("about_desc")}
             </p>
+
+            {uvStatus?.installed && uvStatus.version && (
+              <p style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--green)', margin: '0 0 20px', fontWeight: 600 }}>
+                <Zap size={13} /> {t("uv_installed", { v: uvStatus.version })}
+              </p>
+            )}
 
             <div className="lang-toggle">
               <span className="lang-toggle-label"><Languages size={13} /> {t("language")}</span>

@@ -56,7 +56,25 @@ fn cloudflared_bin() -> String {
     "cloudflared".to_string()
 }
 
-#[cfg(not(target_os = "macos"))]
+/// Linux도 데스크톱 런처로 띄우면 셸 PATH를 온전히 못 받을 수 있으므로
+/// 잘 알려진 설치 경로(패키지/직접 설치, `~/.local/bin` 포함)를 우선 확인한다.
+#[cfg(target_os = "linux")]
+fn cloudflared_bin() -> String {
+    if let Ok(home) = std::env::var("HOME") {
+        let p = std::path::Path::new(&home).join(".local/bin/cloudflared");
+        if p.exists() {
+            return p.to_string_lossy().to_string();
+        }
+    }
+    for p in ["/usr/local/bin/cloudflared", "/usr/bin/cloudflared"] {
+        if std::path::Path::new(p).exists() {
+            return p.to_string();
+        }
+    }
+    "cloudflared".to_string()
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux")))]
 fn cloudflared_bin() -> String {
     "cloudflared".to_string()
 }

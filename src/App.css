@@ -917,6 +917,11 @@ body {
   color: var(--accent) !important;
 }
 
+/* Open Folder Button */
+.folder-btn:hover:not(:disabled) {
+  color: var(--accent) !important;
+}
+
 /* ─── Stats Bar (also a drag handle) ─── */
 .stats-bar {
   -webkit-app-region: drag;

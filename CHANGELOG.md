@@ -4,6 +4,17 @@ All notable changes per release. The CI injects the section matching the
 release tag (e.g. `## v0.4.0`) into the GitHub release notes and the
 in-app updater notes, so keep headings as `## vX.Y.Z`.
 
+## v0.5.0
+- **Linux support** — uvws now builds and runs on Linux. Releases ship
+  `.AppImage` (auto-updatable), `.deb`, and `.rpm`. (See the first-launch note
+  below for the AppImage.)
+- **Open project folder** — a new **Open Folder** button in the project header
+  opens the project's working directory in your OS file manager
+  (Finder / Explorer / your Linux file manager).
+- **uv install gate & onboarding** — uvws now detects whether Astral's `uv` is
+  installed and offers a one-click install, plus a friendlier empty state so the
+  very first run isn't blocked by a missing dependency.
+
 ## v0.4.1
 - **Fixed the app icon** — it had a white background plate behind it; the
   icon is now properly transparent everywhere (app icon and favicons).

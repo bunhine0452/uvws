@@ -23,10 +23,30 @@ jobs:
           - platform: windows-latest
             args: ''
             rust_target: ''
+          # Linux: built on Ubuntu 22.04 for broad glibc/webkit2gtk-4.1 compatibility.
+          # Produces .AppImage (auto-updatable) + .deb + .rpm via bundle targets "all".
+          - platform: ubuntu-22.04
+            args: ''
+            rust_target: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev \
+            libxdo-dev \
+            libssl-dev \
+            build-essential \
+            curl wget file
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -83,11 +103,17 @@ jobs:
             | macOS (Apple Silicon) | `.dmg` (aarch64) |
             | macOS (Intel) | `.dmg` (x64) |
             | Windows | `.msi` / `.exe` |
+            | Linux | `.AppImage` / `.deb` / `.rpm` |
 
             ### ⚠️ macOS First Launch
             macOS may show a security warning because the app is not notarized.
             **Right-click** the app → **Open** → Click **Open** in the dialog.
             You only need to do this once.
+
+            ### 🐧 Linux First Launch
+            For the AppImage, make it executable first: `chmod +x uvws_*.AppImage`, then run it.
+            (`.deb` / `.rpm` install via your package manager.) AppImage may require
+            `libfuse2` on some distros: `sudo apt install libfuse2`.
 
             ### Prerequisites
             - [uv](https://docs.astral.sh/uv/) must be installed on your system.

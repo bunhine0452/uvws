@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="color-scheme" content="light dark" />
 <title>uvws — One-click Python project manager & launcher, powered by uv</title>
-<meta name="description" content="Run Python projects with one click — no more cd, venv, python. A uv-based desktop app with a built-in terminal, force-kill ports (kill port), concurrent runs, and Git integration. Perfect for launching ComfyUI, Flask, FastAPI, and Streamlit. macOS · Windows · free & open source." />
+<meta name="description" content="Run Python projects with one click — no more cd, venv, python. A uv-based desktop app with a built-in terminal, force-kill ports (kill port), concurrent runs, and Git integration. Perfect for launching ComfyUI, Flask, FastAPI, and Streamlit. macOS · Windows · Linux · free & open source." />
 <meta name="keywords" content="파이썬 프로젝트 관리, 파이썬 프로젝트 매니저, uv GUI, uv 런처, uv 사용법, astral uv, 파이썬 원클릭 실행, venv 자동화, 가상환경 관리, 포트 강제 종료, kill port, 포트 이미 사용중, 로컬 서버 관리, localhost 관리, ComfyUI 실행, Stable Diffusion 로컬 실행, 로컬 AI 앱 실행, Flask 실행, FastAPI 실행, Streamlit 실행, Django 실행, 파이썬 데스크탑 앱, 맥 파이썬 런처, 윈도우 파이썬 런처, 여러 파이썬 프로젝트 동시 실행, Tauri 앱, 파이썬 GUI 도구, python project manager, python launcher, uv gui launcher, run python one click, kill port mac, comfyui launcher, manage multiple python servers, venv manager" />
 <meta name="author" content="bunhine0452" />
 <meta name="robots" content="index, follow, max-image-preview:large" />
@@ -22,7 +22,7 @@
 <meta property="og:locale:alternate" content="ko_KR" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="uvws — Run Python projects with one click" />
-<meta name="twitter:description" content="A uv-based Python project manager. Built-in terminal · force-kill ports · concurrent runs. Free for macOS · Windows." />
+<meta name="twitter:description" content="A uv-based Python project manager. Built-in terminal · force-kill ports · concurrent runs. Free for macOS · Windows · Linux." />
 <meta name="twitter:image" content="https://uvws.site/preview.png" />
 <meta name="twitter:image:alt" content="uvws app screenshot" />
 <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -355,8 +355,8 @@
       "description": "Run Python projects with one click — no more cd, venv, python. A uv-based desktop app with a built-in terminal, force-kill ports (kill port), concurrent runs, and Git integration. Great for launching local servers like ComfyUI, Flask, FastAPI, and Streamlit.",
       "applicationCategory": "DeveloperApplication",
       "applicationSubCategory": "Python project manager / launcher",
-      "operatingSystem": "macOS, Windows",
-      "softwareVersion": "0.3.1",
+      "operatingSystem": "macOS, Windows, Linux",
+      "softwareVersion": "0.5.0",
       "downloadUrl": "https://github.com/bunhine0452/uvws/releases/latest",
       "softwareHelp": "https://github.com/bunhine0452/uvws",
       "license": "https://github.com/bunhine0452/uvws/blob/main/LICENSE",
@@ -370,7 +370,11 @@
         "Force-kill ports (kill port) — confirms the port is actually free",
         "Import wizard for requirements.txt · pyproject.toml (Python 3.10–3.13)",
         "Concurrent runs with auto-cleanup on quit",
-        "Git integration — branch / ahead·behind / Fetch·Pull·Push"
+        "Git integration — branch / ahead·behind / Fetch·Pull·Push",
+        "Share a running local server via public link + QR (cloudflared) — open it on your phone",
+        "Live per-project CPU / memory resource monitor with sparkline",
+        "Native notifications when a server is ready or crashes",
+        "Dependency doctor — find and one-click upgrade outdated packages"
       ],
       "author": { "@id": "https://uvws.site/#person" },
       "offers": {
@@ -388,7 +392,7 @@
           "name": "What is uvws?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "uvws is a Python project manager that lets you manage many local Python projects in one desktop app and run them with a single click. It wraps execution in Astral's uv (uv run) and provides a built-in terminal, force-kill ports, concurrent runs, and Git integration. It's free and open source, for macOS and Windows."
+            "text": "uvws is a Python project manager that lets you manage many local Python projects in one desktop app and run them with a single click. It wraps execution in Astral's uv (uv run) and provides a built-in terminal, force-kill ports, concurrent runs, and Git integration. It's free and open source, for macOS, Windows, and Linux."
           }
         },
         {
@@ -436,7 +440,7 @@
           "name": "Is it free? Which operating systems are supported?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "It's free and open source (MIT). It supports macOS (Apple Silicon · Intel) and Windows 10 or later, and you can download the installer for your OS directly from uvws.site."
+            "text": "It's free and open source (MIT). It supports macOS (Apple Silicon · Intel), Windows 10 or later, and Linux (AppImage / deb / rpm), and you can download the installer for your OS directly from uvws.site."
           }
         }
       ]
@@ -472,7 +476,7 @@
       <a class="btn btn-primary" href="#download" data-i18n="hero_cta_dl">⬇ Download</a>
       <a class="btn btn-ghost" href="https://github.com/bunhine0452/uvws" target="_blank" rel="noopener" data-i18n="hero_cta_gh">★ View on GitHub</a>
     </div>
-    <p class="hero-note" data-i18n="hero_note">macOS (Apple Silicon · Intel) · Windows 10+ · Free</p>
+    <p class="hero-note" data-i18n="hero_note">macOS (Apple Silicon · Intel) · Windows 10+ · Linux · Free</p>
   </div>
 </header>
 
@@ -533,6 +537,21 @@
       <h3 data-i18n="f6_t">Git integration</h3>
       <p data-i18n="f6_d">If the project is a Git repo, see branch · ahead/behind · changed files · recent commits at a glance, and Fetch / Pull / Push with a button.</p>
     </div>
+    <div class="card">
+      <div class="ico">📲</div>
+      <h3 data-i18n="f7_t">Share + QR</h3>
+      <p data-i18n="f7_d">Expose a running local server through a public link and QR in one click — scan it to open your app on your phone, no deploy. Powered by cloudflared.</p>
+    </div>
+    <div class="card">
+      <div class="ico">📊</div>
+      <h3 data-i18n="f8_t">Live resource monitor</h3>
+      <p data-i18n="f8_d">Watch each project's CPU and memory usage live, with an inline sparkline — so you can tell at a glance which run is heavy.</p>
+    </div>
+    <div class="card">
+      <div class="ico">🩺</div>
+      <h3 data-i18n="f9_t">Dependency doctor</h3>
+      <p data-i18n="f9_d">Check for outdated packages and upgrade them — per package or all at once — right from the Dependencies tab, plus native notifications when a server is ready or crashes.</p>
+    </div>
   </div>
 </section>
 
@@ -549,19 +568,24 @@
     </div>
 
     <div class="dl-grid">
-      <a class="dl-card" id="dl-mac-arm" href="https://github.com/bunhine0452/uvws/releases/download/v0.3.0/uvws_0.3.0_aarch64.dmg" rel="noopener" download>
+      <a class="dl-card" id="dl-mac-arm" href="https://github.com/bunhine0452/uvws/releases/download/v0.5.0/uvws_0.5.0_aarch64.dmg" rel="noopener" download>
         <div class="dl-os">macOS · Apple Silicon</div>
         <div class="dl-detail">M1 ~ M4 · aarch64.dmg</div>
         <span class="dl-go" data-i18n="dl_go">Download →</span>
       </a>
-      <a class="dl-card" id="dl-mac-intel" href="https://github.com/bunhine0452/uvws/releases/download/v0.3.0/uvws_0.3.0_x64.dmg" rel="noopener" download>
+      <a class="dl-card" id="dl-mac-intel" href="https://github.com/bunhine0452/uvws/releases/download/v0.5.0/uvws_0.5.0_x64.dmg" rel="noopener" download>
         <div class="dl-os">macOS · Intel</div>
         <div class="dl-detail">x64.dmg</div>
         <span class="dl-go" data-i18n="dl_go">Download →</span>
       </a>
-      <a class="dl-card" id="dl-win" href="https://github.com/bunhine0452/uvws/releases/download/v0.3.0/uvws_0.3.0_x64-setup.exe" rel="noopener" download>
+      <a class="dl-card" id="dl-win" href="https://github.com/bunhine0452/uvws/releases/download/v0.5.0/uvws_0.5.0_x64-setup.exe" rel="noopener" download>
         <div class="dl-os">Windows 10+</div>
         <div class="dl-detail">x64-setup.exe</div>
+        <span class="dl-go" data-i18n="dl_go">Download →</span>
+      </a>
+      <a class="dl-card" id="dl-linux" href="https://github.com/bunhine0452/uvws/releases/latest" rel="noopener" download>
+        <div class="dl-os">Linux</div>
+        <div class="dl-detail">x86_64.AppImage</div>
         <span class="dl-go" data-i18n="dl_go">Download →</span>
       </a>
     </div>
@@ -574,6 +598,8 @@
       <code>powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code>
       <span class="lbl" data-i18n="prereq_gatekeeper">If macOS shows a security warning on first launch (not yet notarized)</span>
       <code>xattr -cr /Applications/uvws.app</code>
+      <span class="lbl" data-i18n="prereq_linux">Linux — make the AppImage executable, then run it (needs libfuse2 on some distros)</span>
+      <code>chmod +x uvws_*.AppImage &amp;&amp; ./uvws_*.AppImage</code>
     </div>
   </div>
 </section>
@@ -604,7 +630,7 @@
   <div class="faq-list">
     <details open>
       <summary data-i18n="faq_q1">What is uvws?</summary>
-      <div class="faq-a" data-i18n="faq_a1">A <strong>Python project manager</strong> that lets you manage many local Python projects in one desktop app and run them with a single click. It wraps execution in Astral's <code>uv run</code> and adds a built-in terminal, force-kill ports, concurrent runs, and Git integration. Free and open source, for macOS and Windows.</div>
+      <div class="faq-a" data-i18n="faq_a1">A <strong>Python project manager</strong> that lets you manage many local Python projects in one desktop app and run them with a single click. It wraps execution in Astral's <code>uv run</code> and adds a built-in terminal, force-kill ports, concurrent runs, and Git integration. Free and open source, for macOS, Windows, and Linux.</div>
     </details>
     <details>
       <summary data-i18n="faq_q2">What is uv? Do I have to install it?</summary>
@@ -628,7 +654,7 @@
     </details>
     <details>
       <summary data-i18n="faq_q7">Is it free? Which OSes are supported?</summary>
-      <div class="faq-a" data-i18n="faq_a7">It's free and open source (MIT). It supports macOS (Apple Silicon · Intel) and Windows 10+, and you can grab the installer for your OS from the download buttons above.</div>
+      <div class="faq-a" data-i18n="faq_a7">It's free and open source (MIT). It supports macOS (Apple Silicon · Intel), Windows 10+, and Linux (AppImage / deb / rpm), and you can grab the installer for your OS from the download buttons above.</div>
     </details>
   </div>
 </section>
@@ -650,9 +676,9 @@
       nav_features: "기능", nav_faq: "FAQ", nav_download: "다운로드",
       hero_pill: "uv 기반 · Tauri 2 · 오픈소스",
       hero_title: '파이썬 프로젝트를<br /><span class="accent">클릭 한 번으로</span> 실행',
-      hero_sub: "cd 하고 venv 켜고 python 돌리던 거, 이제 폴더 한 번 등록해두면 끝. 여러 프로젝트를 데스크탑 앱 하나에서 관리하고 실행하세요.",
+      hero_sub: "cd 하고 venv 켜고 python 돌리던 거, 폴더 한 번 등록해두면 끝. ComfyUI·Stable Diffusion·FastAPI 같은 로컬 AI 앱과 파이썬 프로젝트를 클릭 한 번으로 띄우세요.",
       hero_cta_dl: "⬇ 다운로드", hero_cta_gh: "★ GitHub에서 보기",
-      hero_note: "macOS (Apple Silicon · Intel) · Windows 10+ · 무료",
+      hero_note: "macOS (Apple Silicon · Intel) · Windows 10+ · Linux · 무료",
       term_c1: '<span class="c"># 원래 매번 이렇게 했죠</span>',
       term_c2: '<span class="c"># uvws에선</span>',
       term_n1: '<span class="g">✓</span> 프로젝트 클릭 → 실행 <span class="c">(uv run으로 자동 래핑)</span>',
@@ -666,11 +692,15 @@
       f4_t: "임포트 위저드", f4_d: "requirements.txt나 pyproject.toml이 있는 폴더를 가져올 때 Python 버전(3.10–3.13)을 고르고 의존성 설치까지 한 번에.",
       f5_t: "동시 실행 & 자동 정리", f5_d: "여러 프로젝트 서버를 동시에 띄우고 각각 독립된 터미널·포트로 관리. 앱을 끄면 돌던 서버가 함께 정리되고, 비정상 종료 시에도 다음 실행에서 청소합니다.",
       f6_t: "Git 통합", f6_d: "프로젝트가 Git 저장소면 브랜치·ahead/behind·변경 파일·최근 커밋을 한눈에 보고, Fetch / Pull / Push를 버튼으로 실행합니다.",
+      f7_t: "공유 + QR", f7_d: "실행 중인 로컬 서버를 공개 링크와 QR로 클릭 한 번에 노출 — 배포 없이 QR을 찍어 폰에서 바로 앱을 엽니다. cloudflared 기반.",
+      f8_t: "실시간 리소스 모니터", f8_d: "각 프로젝트의 CPU·메모리 사용량을 실시간 스파크라인으로 확인 — 어떤 실행이 무거운지 한눈에 보입니다.",
+      f9_t: "의존성 닥터", f9_d: "구버전 패키지를 찾아 개별 또는 전체를 업그레이드 — 의존성 탭에서 바로. 서버 준비/비정상 종료 시 네이티브 알림도 제공합니다.",
       dl_title: "받아서 바로 써보세요",
       dl_sub: "버튼을 누르면 최신 버전이 <strong>바로 다운로드</strong>됩니다. 깃허브 페이지를 거치지 않아요.",
       dl_notes: "업데이트 내용 보기", dl_go: "바로 다운로드 →",
       prereq_title: "⚠️ 먼저 uv가 설치돼 있어야 합니다",
       prereq_gatekeeper: "macOS 첫 실행 시 보안 경고가 뜨면 (공증 전이라)",
+      prereq_linux: "Linux — AppImage에 실행 권한을 준 뒤 실행하세요 (일부 배포판은 libfuse2 필요)",
       uc_title: "이런 작업에 잘 맞아요",
       uc_sub: "로컬에서 파이썬 서버를 자주 띄우는 분이라면 거의 다 해당됩니다.",
       uc_1: "ComfyUI 실행", uc_2: "Stable Diffusion WebUI", uc_3: "Flask · FastAPI 개발 서버",
@@ -680,7 +710,7 @@
       faq_title: "자주 묻는 질문",
       faq_sub: "uvws가 무엇이고 어떤 파이썬 작업에 쓰는지 빠르게 정리했습니다.",
       faq_q1: "uvws는 어떤 앱인가요?",
-      faq_a1: '로컬 파이썬 프로젝트 여러 개를 데스크탑 앱 하나에서 관리하고 클릭 한 번으로 실행하는 <strong>파이썬 프로젝트 매니저</strong>입니다. 내부적으로 Astral의 <code>uv run</code>으로 감싸 실행하며, 내장 터미널·포트 강제 종료·여러 프로젝트 동시 실행·Git 통합을 제공합니다. macOS와 Windows를 지원하는 무료 오픈소스예요.',
+      faq_a1: '로컬 파이썬 프로젝트 여러 개를 데스크탑 앱 하나에서 관리하고 클릭 한 번으로 실행하는 <strong>파이썬 프로젝트 매니저</strong>입니다. 내부적으로 Astral의 <code>uv run</code>으로 감싸 실행하며, 내장 터미널·포트 강제 종료·여러 프로젝트 동시 실행·Git 통합을 제공합니다. macOS·Windows·Linux를 지원하는 무료 오픈소스예요.',
       faq_q2: "uv가 무엇인가요? 꼭 설치해야 하나요?",
       faq_a2: 'uv는 Astral이 만든 아주 빠른 파이썬 패키지·가상환경 관리 도구입니다. uvws는 uv를 백엔드로 쓰기 때문에 먼저 uv를 설치해야 합니다. macOS·Linux는 <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code>, Windows는 PowerShell에서 <code>irm https://astral.sh/uv/install.ps1 | iex</code> 로 설치하세요.',
       faq_q3: "ComfyUI, Stable Diffusion 같은 로컬 AI 앱도 실행되나요?",
@@ -692,7 +722,7 @@
       faq_q6: "venv(가상환경)를 직접 만들어야 하나요?",
       faq_a6: "아니요. uvws가 <code>uv run</code>으로 감싸 실행하므로 venv 활성화 없이 동작하고, 가상환경이 없으면 첫 실행 때 자동으로 만들어 줍니다. requirements.txt나 pyproject.toml이 있으면 임포트 위저드에서 Python 버전(3.10–3.13)을 고르고 의존성까지 한 번에 설치합니다.",
       faq_q7: "무료인가요? 어떤 OS를 지원하나요?",
-      faq_a7: "무료 오픈소스(MIT)입니다. macOS(Apple Silicon·Intel)와 Windows 10 이상을 지원하고, 위 다운로드 버튼에서 OS에 맞는 설치 파일을 바로 받을 수 있어요.",
+      faq_a7: "무료 오픈소스(MIT)입니다. macOS(Apple Silicon·Intel)·Windows 10 이상·Linux(AppImage/deb/rpm)를 지원하고, 위 다운로드 버튼에서 OS에 맞는 설치 파일을 바로 받을 수 있어요.",
       footer_left: "uvws · MIT License · 개인 사이드 프로젝트입니다",
       footer_issues: "이슈 / 피드백",
     },
@@ -700,9 +730,9 @@
       nav_features: "Features", nav_faq: "FAQ", nav_download: "Download",
       hero_pill: "Powered by uv · Tauri 2 · Open source",
       hero_title: 'Run Python projects<br />with <span class="accent">one click</span>',
-      hero_sub: "No more cd, activate venv, run python. Register a folder once and you're done — manage and launch all your projects from a single desktop app.",
+      hero_sub: "No more cd, activate venv, run python. Register a folder once — then launch ComfyUI, Stable Diffusion, FastAPI and any Python project in one click.",
       hero_cta_dl: "⬇ Download", hero_cta_gh: "★ View on GitHub",
-      hero_note: "macOS (Apple Silicon · Intel) · Windows 10+ · Free",
+      hero_note: "macOS (Apple Silicon · Intel) · Windows 10+ · Linux · Free",
       term_c1: '<span class="c"># What you used to do every time</span>',
       term_c2: '<span class="c"># With uvws</span>',
       term_n1: '<span class="g">✓</span> Click a project → it runs <span class="c">(auto-wrapped with uv run)</span>',
@@ -716,11 +746,15 @@
       f4_t: "Import wizard", f4_d: "Importing a folder with requirements.txt or pyproject.toml? Pick a Python version (3.10–3.13) and install dependencies in one go.",
       f5_t: "Concurrent runs & auto-cleanup", f5_d: "Run multiple project servers at once, each with its own terminal and port. Quitting the app cleans up running servers — and orphans are swept on the next launch.",
       f6_t: "Git integration", f6_d: "If the project is a Git repo, see branch · ahead/behind · changed files · recent commits at a glance, and Fetch / Pull / Push with a button.",
+      f7_t: "Share + QR", f7_d: "Expose a running local server through a public link and QR in one click — scan it to open your app on your phone, no deploy. Powered by cloudflared.",
+      f8_t: "Live resource monitor", f8_d: "Watch each project's CPU and memory usage live, with an inline sparkline — so you can tell at a glance which run is heavy.",
+      f9_t: "Dependency doctor", f9_d: "Check for outdated packages and upgrade them — per package or all at once — right from the Dependencies tab, plus native notifications when a server is ready or crashes.",
       dl_title: "Grab it and get going",
       dl_sub: "Click a button and the latest version <strong>downloads directly</strong> — no detour through GitHub.",
       dl_notes: "What's new", dl_go: "Download →",
       prereq_title: "⚠️ You need uv installed first",
       prereq_gatekeeper: "If macOS shows a security warning on first launch (not yet notarized)",
+      prereq_linux: "Linux — make the AppImage executable, then run it (needs libfuse2 on some distros)",
       uc_title: "Great for these jobs",
       uc_sub: "If you spin up local Python servers a lot, almost all of these apply.",
       uc_1: "Run ComfyUI", uc_2: "Stable Diffusion WebUI", uc_3: "Flask · FastAPI dev servers",
@@ -730,7 +764,7 @@
       faq_title: "Frequently asked questions",
       faq_sub: "A quick rundown of what uvws is and what Python tasks it's for.",
       faq_q1: "What is uvws?",
-      faq_a1: 'A <strong>Python project manager</strong> that lets you manage many local Python projects in one desktop app and run them with a single click. It wraps execution in Astral\'s <code>uv run</code> and adds a built-in terminal, force-kill ports, concurrent runs, and Git integration. Free and open source, for macOS and Windows.',
+      faq_a1: 'A <strong>Python project manager</strong> that lets you manage many local Python projects in one desktop app and run them with a single click. It wraps execution in Astral\'s <code>uv run</code> and adds a built-in terminal, force-kill ports, concurrent runs, and Git integration. Free and open source, for macOS, Windows, and Linux.',
       faq_q2: "What is uv? Do I have to install it?",
       faq_a2: 'uv is Astral\'s very fast Python package and virtualenv manager. uvws uses uv as its backend, so install it first: on macOS/Linux run <code>curl -LsSf https://astral.sh/uv/install.sh | sh</code>, on Windows run <code>irm https://astral.sh/uv/install.ps1 | iex</code> in PowerShell.',
       faq_q3: "Can it launch local AI apps like ComfyUI or Stable Diffusion?",
@@ -742,7 +776,7 @@
       faq_q6: "Do I have to create a venv myself?",
       faq_a6: "No. uvws wraps runs in <code>uv run</code>, so it works without activating a venv and creates one on first run if missing. With a requirements.txt or pyproject.toml, the import wizard lets you pick a Python version (3.10–3.13) and install dependencies in one go.",
       faq_q7: "Is it free? Which OSes are supported?",
-      faq_a7: "It's free and open source (MIT). It supports macOS (Apple Silicon · Intel) and Windows 10+, and you can grab the installer for your OS from the download buttons above.",
+      faq_a7: "It's free and open source (MIT). It supports macOS (Apple Silicon · Intel), Windows 10+, and Linux (AppImage / deb / rpm), and you can grab the installer for your OS from the download buttons above.",
       footer_left: "uvws · MIT License · a personal side project",
       footer_issues: "Issues / Feedback",
     },
@@ -777,6 +811,7 @@
       setHref("dl-mac-arm", pick(assets, /aarch64\.dmg$/i));
       setHref("dl-mac-intel", pick(assets, /x64\.dmg$/i));
       setHref("dl-win", pick(assets, /x64-setup\.exe$/i));
+      setHref("dl-linux", pick(assets, /\.AppImage$/i));
       const notes = document.getElementById("release-notes-link");
       if (notes && rel.html_url) notes.href = rel.html_url;
       const tagEl = document.getElementById("release-tag");

@@ -1,5 +1,6 @@
 <!-- oculpm:begin v1 -->
 <!-- schema_version: 1 -->
+<!-- template_version: 2 -->
 # ocul-pm 작업 기록 규칙 (v1)
 
 당신은 ocul-pm 으로 추적되는 프로젝트에서 작업하고 있습니다. **하나의 논리적 작업 단위** (버그 수정 / 기능 추가 / 리팩토링 / 에러 해결 / 잡일) 를 끝낼 때마다, 그 작업에 관한 markdown 파일을 정해진 위치에 한 개 작성하세요. 사용자에게 묻지 마세요 — 작업의 끝을 인식하면 즉시 기록합니다.
@@ -86,4 +87,63 @@ tags: ["watcher", "cache", "dogfooding-finding"]
 ## 6. 예시
 
 본 템플릿에 모든 예시를 박지 않는 이유는 토큰 비용. `.oculpm/journal/` 의 같은 type 의 최근 entry 1~2 개를 직접 읽어 참고하세요 — 실제 데이터가 가장 좋은 표본입니다. 새 프로젝트라 비어 있다면, dogfooding 시드 entry 가 곧 생성됩니다.
+
+## 7. Planner 갱신 (작업 일지와 별개)
+
+작업 일지가 *무엇을 했는지* 의 회고 기록이라면, **Planner** (`.oculpm/planner/*.md`) 는 *무엇을, 어디까지* 의 **현재 계획** 이다. 한 작업 단위를 끝내고 §1~§4 대로 일지를 쓴 **직후**, 그 작업에 대응하는 Planner 항목도 갱신하라. (Planner 파일이 없거나 대응 항목이 없으면 갱신하지 않아도 된다 — 사용자가 만든 plan 이 있을 때만.)
+
+**새 plan 을 만들 때 (파일 맨 위는 반드시 YAML frontmatter):**
+
+```markdown
+---
+oculpm_plan: v1
+id: autonomy-refactor          # 영문 kebab-case. 파일명과 동일하게
+title: "Lean Autonomous Adelie"  # 사람이 읽는 제목 (따옴표)
+status: active                 # active | done | archived
+created: 2026-06-07
+updated: 2026-06-07
+owner: claude-code             # 네 agent.id
+---
+
+## Phase 1 — 핵심 변경
+- [ ] 첫 항목 {#first-item}
+- [ ] 둘째 항목 {#second-item}
+
+<!-- oculpm:plan-log begin v1 -->
+<!-- oculpm:plan-log end -->
+```
+
+- `id` / `title` 은 **frontmatter** 가 정답이다. `# H1` 제목만 쓰면 `title` 누락 경고가 난다 (frontmatter 가 있으면 H1 은 선택).
+- **체크 항목은 `- [ ]` 줄.** phase 헤딩(`## …`)에 `{#id}` 를 붙이면 phase 도 추적된다 — phase 의 *상태/진척은 그 아래 항목들의 롤업* 으로 자동 계산되고, plan-log 에 phase `{#id}` 로 갱신을 남기면 '누가 손댔는지' 가 기록된다. phase 자체엔 `[ ]` 글리프를 쓰지 않는다 (상태는 롤업이 정답).
+
+**갱신 절차:**
+
+1. `.oculpm/planner/` 에서 관련 plan 파일을 연다.
+2. 대응 항목의 **상태 글리프** 를 바꾼다 (한 글자):
+   `[ ]` 할일 · `[~]` 진행중 · `[x]` 완료 · `[!]` 막힘 · `[>]` 이월 · `[-]` 폐기
+3. plan 하단 **갱신 로그** (managed block) 에 **한 줄 append** — 기존 행은 절대 수정하지 말 것:
+
+```markdown
+<!-- oculpm:plan-log begin v1 -->
+| 시각 | 항목 | 에이전트 | 변화 | 일지 | 메모 |
+|---|---|---|---|---|---|
+| 2026-06-07T14:03:00+09:00 | #abs-cache | claude-code | ~→x | journal/20260607/Bugs/0902_bug_onnx.md | |
+<!-- oculpm:plan-log end -->
+```
+
+- `시각` = ISO-8601, **tz offset 필수** (`created_at` 과 동일 규칙).
+- `항목` = 대응 항목의 `{#id}` (앞 `#` 포함).
+- `에이전트` = **네 agent.id 그대로** (`claude-code` / `cursor` / `antigravity` / `gemini-cli`). 위조 금지.
+- `변화` = `이전→새` 글리프 (예 `~→x`). 새 항목 생성이면 `→☐`.
+- `일지` = 방금 쓴 일지의 `.oculpm/` 상대경로 (없으면 빈칸).
+
+**규칙:**
+
+- 항목 식별자 `{#id}` 와 managed block 경계 (`<!-- oculpm:plan-log … -->`) 는 **보존**. 글리프만 바꾸고, 로그는 append 만.
+- **항목은 한 줄.** `- [ ] 내용 {#id}` 를 한 줄로 쓴다. 내용이 길어도 **줄바꿈하지 말고** `{#id}` 를 그 줄 *끝* 에 둔다 (파서가 줄 단위로 읽으므로, 둘째 줄로 넘긴 `{#id}` 는 인식 안 됨).
+- 새 항목을 추가하면 안정적인 영어 kebab id 를 직접 부여 (예 `{#search-scopes}`). 같은 phase (`## …`) 아래에 둔다.
+- 큰 결정이 생기면 `## 결정` 섹션에 `### Decision X — 제목 {#id}` 블록으로 잠근다 (`- 잠금 <날짜> · <agent.id>` + 근거 + `영향: #항목id`).
+- **일지 내용을 Planner 에 복붙하지 말 것.** Planner 항목은 일지를 *참조* (`일지` 열) 만 한다 — 같은 내용을 두 곳에 쓰지 않는다.
+- **완료·잠금된 plan 은 절대 수정하지 말 것.** frontmatter `status:` 가 `active` 가 아니면(`done`/`archived`) 그 plan 은 사용자가 잠근 것이다 — 항목 글리프·plan-log·본문을 건드리지 말라. 새 작업은 `status: active` 인 다른 plan 에서 진행하고, 그런 plan 이 없으면 **새 plan 파일을 만들어** 거기서 계획하라.
+- 항목의 *현재 상태* 는 본문 글리프가 정답, 로그는 *이력* 이다 (제자리 갱신 — 일지처럼 append-only 가 아니다).
 <!-- oculpm:end -->

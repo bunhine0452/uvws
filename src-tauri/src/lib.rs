@@ -296,6 +296,107 @@ async fn upgrade_all(path: String, names: Vec<String>) -> Result<String, String>
     }
 }
 
+/// uv 실행 파일 경로를 해석합니다. GUI 앱은 셸 PATH를 상속받지 못할 수 있으므로
+/// 잘 알려진 설치 경로(uv 공식 인스톨러 기본값 `~/.local/bin`, 구버전 `~/.cargo/bin` 포함)를
+/// 우선 확인하고, 없으면 PATH의 `uv`로 폴백합니다. (cloudflared 해석과 동일 전략)
+fn uv_bin() -> String {
+    #[cfg(not(target_os = "windows"))]
+    {
+        if let Ok(home) = std::env::var("HOME") {
+            for rel in [".local/bin/uv", ".cargo/bin/uv"] {
+                let p = Path::new(&home).join(rel);
+                if p.exists() {
+                    return p.to_string_lossy().to_string();
+                }
+            }
+        }
+        for p in ["/opt/homebrew/bin/uv", "/usr/local/bin/uv"] {
+            if Path::new(p).exists() {
+                return p.to_string();
+            }
+        }
+    }
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(home) = std::env::var("USERPROFILE") {
+            for rel in [".local\\bin\\uv.exe", ".cargo\\bin\\uv.exe"] {
+                let p = Path::new(&home).join(rel);
+                if p.exists() {
+                    return p.to_string_lossy().to_string();
+                }
+            }
+        }
+    }
+    "uv".to_string()
+}
+
+#[derive(Serialize)]
+struct UvStatus {
+    installed: bool,
+    version: Option<String>,
+}
+
+/// uv 설치 여부와 버전을 확인합니다. (`uv --version` → "uv x.y.z")
+#[tauri::command]
+async fn check_uv() -> Result<UvStatus, String> {
+    let bin = uv_bin();
+    match TokioCommand::new(&bin).arg("--version").output().await {
+        Ok(o) if o.status.success() => {
+            let v = String::from_utf8_lossy(&o.stdout)
+                .trim()
+                .trim_start_matches("uv ")
+                .to_string();
+            Ok(UvStatus {
+                installed: true,
+                version: Some(v),
+            })
+        }
+        _ => Ok(UvStatus {
+            installed: false,
+            version: None,
+        }),
+    }
+}
+
+/// uv를 Astral 공식 인스톨러로 설치합니다(사용자가 버튼으로 명시적 동의한 경우에만 호출됨).
+/// macOS/Linux: astral.sh/uv/install.sh, Windows: install.ps1.
+/// 설치 위치(`~/.local/bin`)는 main.rs가 시작 시 PATH에 이미 추가하므로,
+/// 같은 세션에서 곧바로 uv를 호출할 수 있습니다.
+#[tauri::command]
+async fn install_uv() -> Result<String, String> {
+    #[cfg(not(target_os = "windows"))]
+    let output = TokioCommand::new("sh")
+        .args(["-c", "curl -LsSf https://astral.sh/uv/install.sh | sh"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run installer: {}", e))?;
+
+    #[cfg(target_os = "windows")]
+    let output = TokioCommand::new("powershell")
+        .args([
+            "-ExecutionPolicy",
+            "ByPass",
+            "-NoProfile",
+            "-Command",
+            "irm https://astral.sh/uv/install.ps1 | iex",
+        ])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run installer: {}", e))?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    } else {
+        Err(format!(
+            "{}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        )
+        .trim()
+        .to_string())
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let process_registry = Arc::new(runner::ProcessRegistry::default());
@@ -351,6 +452,8 @@ pub fn run() {
             list_outdated,
             upgrade_package,
             upgrade_all,
+            check_uv,
+            install_uv,
             runner::start_project,
             runner::stop_project,
             runner::sync_project_dependencies,
