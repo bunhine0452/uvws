@@ -70,7 +70,7 @@ The app is unsigned / un-notarized, so release notes always include the macOS `x
 
 ## Landing site
 
-The marketing site (uvws.site) is the **`landing/`** directory deployed to Vercel — `cd landing && vercel --prod --yes`. The repo-root `index.html` is the Tauri webview entry, **not** the landing page. Download buttons resolve the latest GitHub release at runtime via the GitHub API, so they auto-track new releases without edits.
+The marketing site (uvws.site) is the **`landing/`** directory. It **auto-deploys via Vercel's Git integration on every push to `main`** — the repo-root `vercel.json` (`framework: null`, build skipped, `outputDirectory: "landing"`) tells Vercel to serve `landing/` as static output. So just committing + pushing landing changes ships them; no manual step. **Do not run `cd landing && vercel --prod`** — the `.vercel` link lives in `landing/` but the project's Output Directory is `landing`, so a manual deploy from `landing/` fails ("No Output Directory named landing"). If you must deploy by hand, do it from the **repo root**. The repo-root `index.html` is the Tauri webview entry, **not** the landing page. Download buttons resolve the latest GitHub release at runtime via the GitHub API, so they auto-track new releases without edits.
 
 ## Working conventions in this repo
 
