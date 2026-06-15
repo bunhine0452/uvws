@@ -51,3 +51,5 @@ src-tauri/updater.key.pub
 # Vercel
 .vercel
 landing/.vercel
+
+*.bak
