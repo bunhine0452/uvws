@@ -4,6 +4,13 @@ All notable changes per release. The CI injects the section matching the
 release tag (e.g. `## v0.4.0`) into the GitHub release notes and the
 in-app updater notes, so keep headings as `## vX.Y.Z`.
 
+## v0.7.0
+- **Per-project Python version** — a new **Python version** card in the Config
+  tab lists the CPython versions uv knows about (installed ones flagged). Click
+  one to pin it to the project (`.python-version`); if it isn't installed yet,
+  uv downloads it first. Since everything runs through `uv run`, the pin is
+  picked up automatically on the next launch.
+
 ## v0.6.0
 - **Theme picker** — choose **System / Light / Dark** in Settings (click the
   uvws logo, top-left). Previously the app only followed your OS appearance;
