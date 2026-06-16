@@ -171,6 +171,138 @@ async fn detect_python_version(path: String) -> Result<String, String> {
     }
 }
 
+/// `uv python list`로 본 마이너 버전 1개의 요약.
+#[derive(Clone, Serialize)]
+struct PythonVersionInfo {
+    minor: String,   // "3.12"
+    version: String, // 설치돼 있으면 설치된 최신 패치, 아니면 받을 수 있는 최신 패치
+    installed: bool, // 해당 마이너의 빌드가 하나라도 설치돼 있는지
+}
+
+/// 형식 안전: 버전 요청은 숫자와 점만 (예: "3", "3.12", "3.12.7").
+fn is_valid_py_request(v: &str) -> bool {
+    regex::Regex::new(r"^\d+(\.\d+){0,2}$").unwrap().is_match(v)
+}
+
+/// uv가 아는 CPython 마이너 버전(설치/미설치)을 정리해 반환한다.
+/// 프리릴리스(a/b/rc)·freethreaded·非cpython은 제외하고, 마이너별 최신 패치만 남긴다.
+#[tauri::command]
+async fn uv_python_list() -> Result<Vec<PythonVersionInfo>, String> {
+    let output = TokioCommand::new("uv")
+        .args(["python", "list", "--output-format", "json"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to list Python versions: {}", e))?;
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+    }
+    let arr: Vec<serde_json::Value> =
+        serde_json::from_str(&String::from_utf8_lossy(&output.stdout)).unwrap_or_default();
+
+    let stable = regex::Regex::new(r"^\d+\.\d+\.\d+$").unwrap();
+    // (major, minor) -> (avail_patch, avail_ver, inst_patch, inst_ver)
+    let mut map: std::collections::BTreeMap<(u64, u64), (u64, String, Option<u64>, Option<String>)> =
+        std::collections::BTreeMap::new();
+
+    for e in &arr {
+        if e.get("implementation").and_then(|v| v.as_str()) != Some("cpython") {
+            continue;
+        }
+        if e.get("variant").and_then(|v| v.as_str()).unwrap_or("default") != "default" {
+            continue;
+        }
+        let version = match e.get("version").and_then(|v| v.as_str()) {
+            Some(v) if stable.is_match(v) => v,
+            _ => continue,
+        };
+        let parts = match e.get("version_parts") {
+            Some(p) => p,
+            None => continue,
+        };
+        let major = parts.get("major").and_then(|v| v.as_u64()).unwrap_or(0);
+        let minor = parts.get("minor").and_then(|v| v.as_u64()).unwrap_or(0);
+        let patch = parts.get("patch").and_then(|v| v.as_u64()).unwrap_or(0);
+        if major < 3 || (major == 3 && minor < 8) {
+            continue; // 3.8+ 만 노출
+        }
+        let installed = e.get("path").map(|p| !p.is_null()).unwrap_or(false);
+
+        let ent = map
+            .entry((major, minor))
+            .or_insert((0, String::new(), None, None));
+        if ent.1.is_empty() || patch >= ent.0 {
+            ent.0 = patch;
+            ent.1 = version.to_string();
+        }
+        if installed && ent.2.map_or(true, |ip| patch >= ip) {
+            ent.2 = Some(patch);
+            ent.3 = Some(version.to_string());
+        }
+    }
+
+    let result = map
+        .into_iter()
+        .rev() // 최신 마이너가 위로
+        .map(|((maj, min), (_, avail_ver, inst_patch, inst_ver))| PythonVersionInfo {
+            minor: format!("{}.{}", maj, min),
+            version: inst_ver.unwrap_or(avail_ver),
+            installed: inst_patch.is_some(),
+        })
+        .collect();
+    Ok(result)
+}
+
+/// uv로 특정 Python 버전을 설치한다(다운로드라 수십 초 걸릴 수 있음).
+#[tauri::command]
+async fn uv_python_install(version: String) -> Result<String, String> {
+    if !is_valid_py_request(&version) {
+        return Err(format!("Invalid Python version: {}", version));
+    }
+    let output = TokioCommand::new("uv")
+        .args(["python", "install", &version])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to install Python: {}", e))?;
+    if output.status.success() {
+        Ok(format!("Python {} installed", version))
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+    }
+}
+
+/// 프로젝트 디렉터리에 `.python-version`을 써서 Python 버전을 고정한다.
+/// `uv run`/`uv venv`가 이 핀을 따르므로 별도 실행 로직 변경이 필요 없다.
+#[tauri::command]
+async fn uv_python_pin(path: String, version: String) -> Result<(), String> {
+    if !is_valid_py_request(&version) {
+        return Err(format!("Invalid Python version: {}", version));
+    }
+    let output = TokioCommand::new("uv")
+        .current_dir(&path)
+        .args(["python", "pin", &version])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to pin Python: {}", e))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+    }
+}
+
+/// 프로젝트의 현재 핀(`.python-version` 내용)을 읽는다. 없으면 None.
+#[tauri::command]
+async fn get_python_pin(path: String) -> Result<Option<String>, String> {
+    let pin_file = Path::new(&path).join(".python-version");
+    if let Ok(s) = std::fs::read_to_string(&pin_file) {
+        let s = s.trim().to_string();
+        if !s.is_empty() {
+            return Ok(Some(s));
+        }
+    }
+    Ok(None)
+}
+
 /// 프로젝트 경로에 .venv가 존재하는지 확인합니다.
 #[tauri::command]
 async fn check_venv_exists(path: String) -> Result<bool, String> {
@@ -477,6 +609,10 @@ pub fn run() {
             update_project,
             delete_project,
             detect_python_version,
+            uv_python_list,
+            uv_python_install,
+            uv_python_pin,
+            get_python_pin,
             check_venv_exists,
             list_dependencies,
             check_requirements_exists,

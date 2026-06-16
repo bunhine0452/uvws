@@ -51,6 +51,12 @@ interface GitCommit {
   date: string;
 }
 
+interface PythonVersionInfo {
+  minor: string;    // "3.12"
+  version: string;  // "3.12.13"
+  installed: boolean;
+}
+
 const ICON_COLORS = [
   "#343a40", "#495057", "#868e96", "#ced4da",
   "#d0b8ac", "#a3b18a", "#9a8c98", "#c9ada7",
@@ -355,6 +361,12 @@ export default function App() {
   const [editPath, setEditPath] = useState("");
   const [editPyPath, setEditPyPath] = useState("");
 
+  // uv Python 버전 관리 (config 탭): 사용 가능/설치된 버전 + 프로젝트 핀(.python-version)
+  const [pythonVersions, setPythonVersions] = useState<PythonVersionInfo[]>([]);
+  const [pythonPin, setPythonPin] = useState<string | null>(null);
+  const [pyVerLoading, setPyVerLoading] = useState(false);
+  const [pyVerBusy, setPyVerBusy] = useState<string | null>(null); // 설치/핀 진행 중인 minor
+
   // Env vars editing
   const [envEntries, setEnvEntries] = useState<{ key: string; value: string }[]>([]);
 
@@ -447,6 +459,47 @@ export default function App() {
       loadGit(proj.path);
     }
   }, [activeTab, selectedProjectId]);
+
+  // uv Python 버전 목록 + 프로젝트 핀을 불러온다.
+  const loadPythonInfo = useCallback(async (path: string) => {
+    setPyVerLoading(true);
+    try {
+      const [versions, pin] = await Promise.all([
+        invoke<PythonVersionInfo[]>("uv_python_list").catch(() => [] as PythonVersionInfo[]),
+        invoke<string | null>("get_python_pin", { path }).catch(() => null),
+      ]);
+      setPythonVersions(versions);
+      setPythonPin(pin);
+    } finally {
+      setPyVerLoading(false);
+    }
+  }, []);
+
+  // Config 탭이 활성이거나 프로젝트가 바뀌면 Python 정보를 로드.
+  useEffect(() => {
+    const proj = projects.find((p) => p.id === selectedProjectId);
+    if (activeTab === "config" && proj) {
+      loadPythonInfo(proj.path);
+    }
+  }, [activeTab, selectedProjectId, loadPythonInfo]);
+
+  // 버전 선택 → (미설치면 설치 후) 프로젝트에 핀.
+  const handlePinPython = useCallback(async (v: PythonVersionInfo) => {
+    const proj = projects.find((p) => p.id === selectedProjectId);
+    if (!proj || pyVerBusy) return;
+    setPyVerBusy(v.minor);
+    try {
+      if (!v.installed) {
+        await invoke("uv_python_install", { version: v.minor });
+      }
+      await invoke("uv_python_pin", { path: proj.path, version: v.minor });
+      await loadPythonInfo(proj.path);
+    } catch (e) {
+      await message(String(e), { title: t("failed"), kind: "error" });
+    } finally {
+      setPyVerBusy(null);
+    }
+  }, [projects, selectedProjectId, pyVerBusy, loadPythonInfo, t]);
 
   // Global Event Listeners
   useEffect(() => {
@@ -1135,6 +1188,48 @@ export default function App() {
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="config-card">
+                    <div className="config-card-header">
+                      <div className="config-card-title">
+                        <span className="config-card-title-icon"><Box size={18} /></span>
+                        <div>
+                          <h3>{t("python_version")}</h3>
+                          <span>{t("python_version_desc")}</span>
+                        </div>
+                      </div>
+                      {pythonPin && <span className="uv-badge">{t("pinned_to", { v: pythonPin })}</span>}
+                    </div>
+
+                    {pyVerLoading && pythonVersions.length === 0 ? (
+                      <div className="py-ver-empty">{t("py_loading")}</div>
+                    ) : pythonVersions.length === 0 ? (
+                      <div className="py-ver-empty">{t("py_versions_unavailable")}</div>
+                    ) : (
+                      <div className="py-ver-grid">
+                        {pythonVersions.map((v) => {
+                          const pinnedMinor = pythonPin ? (pythonPin.match(/(\d+\.\d+)/)?.[1] ?? null) : null;
+                          const active = pinnedMinor === v.minor;
+                          const busy = pyVerBusy === v.minor;
+                          return (
+                            <button
+                              key={v.minor}
+                              className={`py-ver-chip ${active ? "active" : ""} ${v.installed ? "installed" : ""}`}
+                              onClick={() => handlePinPython(v)}
+                              disabled={!!pyVerBusy || isBusy}
+                              title={v.installed ? t("py_installed", { v: v.version }) : t("py_not_installed")}
+                            >
+                              {busy
+                                ? <span className="py-ver-spin"><RotateCw size={13} /></span>
+                                : <span className={`py-ver-dot ${v.installed ? "on" : ""}`} />}
+                              <span className="py-ver-num">{v.minor}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <div className="py-ver-hint">{t("python_version_hint")}</div>
                   </div>
                 </div>
               )}

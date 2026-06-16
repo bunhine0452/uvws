@@ -1130,6 +1130,55 @@ body {
   text-transform: uppercase;
 }
 
+/* ─── Python version picker (config tab) ─── */
+.py-ver-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.py-ver-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 11px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--bg-input);
+  box-shadow: inset 0 0 0 1px var(--border-light);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease), color var(--duration-fast) var(--ease),
+    box-shadow var(--duration-fast) var(--ease), transform var(--duration-fast) var(--ease);
+}
+.py-ver-chip:hover:not(:disabled) { background: var(--bg-hover); transform: translateY(-1px); }
+.py-ver-chip:disabled { opacity: 0.55; cursor: default; }
+
+.py-ver-chip.active {
+  background: var(--gradient-accent);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 10px var(--accent-glow);
+}
+
+.py-ver-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--text-tertiary);
+  opacity: 0.45;
+  flex-shrink: 0;
+}
+.py-ver-dot.on { background: var(--green); opacity: 1; box-shadow: 0 0 6px var(--green-glow); }
+.py-ver-chip.active .py-ver-dot { background: rgba(255,255,255,0.9); box-shadow: none; opacity: 1; }
+
+.py-ver-spin { display: inline-flex; animation: spin 0.9s linear infinite; flex-shrink: 0; }
+
+.py-ver-hint { margin-top: 12px; font-size: 11.5px; line-height: 1.5; color: var(--text-tertiary); }
+.py-ver-empty { font-size: 12.5px; color: var(--text-tertiary); padding: 6px 2px; }
+
 .config-field { margin-bottom: 18px; position: relative; }
 .config-field:last-child { margin-bottom: 0; }
 
