@@ -3794,8 +3794,10 @@ dependencies = [
 
 [[package]]
 name = "tauri-app"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
+ "gtk",
+ "objc2",
  "once_cell",
  "regex",
  "serde",

@@ -3,11 +3,16 @@
 /* ═══════════════════════════════════════════════════════════════
    uvws · "Liquid Glass" design system
    Translucent, light-refracting surfaces floating over an ambient
-   colour field. Light + dark palettes via prefers-color-scheme.
+   colour field. Light + dark palettes selected by the [data-theme]
+   attribute on <html> (theme picker); "System" mirrors prefers-color-scheme.
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
+
+  /* ─── UI glass strength (user-adjustable; multiplies the translucent fill
+         alphas below — set live via a --glass-strength inline style on <html>) ─── */
+  --glass-strength: 1;
 
   /* ─── Ambient field (what the glass refracts) ─── */
   --bg-base: #e7ebf3;
@@ -19,10 +24,10 @@
 
   /* ─── Glass materials (kept genuinely translucent — you should see the
          ambient field bleed through; legibility comes from the blur, not opacity) ─── */
-  --glass-fill: rgba(255, 255, 255, 0.26);
-  --glass-fill-strong: rgba(255, 255, 255, 0.42);
-  --glass-fill-hover: rgba(255, 255, 255, 0.38);
-  --glass-fill-active: rgba(255, 255, 255, 0.54);
+  --glass-fill: rgba(255, 255, 255, calc(0.26 * var(--glass-strength)));
+  --glass-fill-strong: rgba(255, 255, 255, calc(0.42 * var(--glass-strength)));
+  --glass-fill-hover: rgba(255, 255, 255, calc(0.38 * var(--glass-strength)));
+  --glass-fill-active: rgba(255, 255, 255, calc(0.54 * var(--glass-strength)));
   --glass-highlight: rgba(255, 255, 255, 0.95);  /* top specular edge */
   --glass-rim: rgba(255, 255, 255, 0.45);        /* inner rim */
   --glass-blur: blur(30px) saturate(200%) brightness(1.04);
@@ -115,81 +120,81 @@
 }
 
 /* ═══════════════════ Dark palette ═══════════════════ */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-base: #070810;
-    --mesh-1: rgba(56, 120, 255, 0.42);
-    --mesh-2: rgba(150, 92, 255, 0.40);
-    --mesh-3: rgba(255, 92, 168, 0.26);
-    --mesh-4: rgba(24, 196, 196, 0.30);
-    --mesh-veil: rgba(8, 10, 20, 0.30);
+:root[data-theme="dark"] {
+  color-scheme: dark;
 
-    --glass-fill: rgba(30, 34, 48, 0.30);
-    --glass-fill-strong: rgba(36, 40, 56, 0.46);
-    --glass-fill-hover: rgba(48, 53, 72, 0.44);
-    --glass-fill-active: rgba(58, 64, 86, 0.58);
-    --glass-highlight: rgba(255, 255, 255, 0.20);
-    --glass-rim: rgba(255, 255, 255, 0.07);
+  --bg-base: #070810;
+  --mesh-1: rgba(56, 120, 255, 0.42);
+  --mesh-2: rgba(150, 92, 255, 0.40);
+  --mesh-3: rgba(255, 92, 168, 0.26);
+  --mesh-4: rgba(24, 196, 196, 0.30);
+  --mesh-veil: rgba(8, 10, 20, 0.30);
 
-    --bg-surface-solid: rgba(26, 29, 40, 0.92);
-    --bg-input: rgba(255, 255, 255, 0.05);
-    --bg-hover: rgba(255, 255, 255, 0.08);
-    --bg-active: rgba(255, 255, 255, 0.14);
-    --bg-terminal: #06070c;
+  --glass-fill: rgba(30, 34, 48, calc(0.30 * var(--glass-strength)));
+  --glass-fill-strong: rgba(36, 40, 56, calc(0.46 * var(--glass-strength)));
+  --glass-fill-hover: rgba(48, 53, 72, calc(0.44 * var(--glass-strength)));
+  --glass-fill-active: rgba(58, 64, 86, calc(0.58 * var(--glass-strength)));
+  --glass-highlight: rgba(255, 255, 255, 0.20);
+  --glass-rim: rgba(255, 255, 255, 0.07);
 
-    --border: rgba(255, 255, 255, 0.10);
-    --border-light: rgba(255, 255, 255, 0.06);
-    --border-focus: rgba(64, 156, 255, 0.7);
-    --hairline: rgba(255, 255, 255, 0.10);
+  --bg-surface-solid: rgba(26, 29, 40, 0.92);
+  --bg-input: rgba(255, 255, 255, 0.05);
+  --bg-hover: rgba(255, 255, 255, 0.08);
+  --bg-active: rgba(255, 255, 255, 0.14);
+  --bg-terminal: #06070c;
 
-    --text-primary: #f1f3f8;
-    --text-secondary: #b6bcca;
-    --text-tertiary: #7c8395;
-    --text-inverse: #ffffff;
+  --border: rgba(255, 255, 255, 0.10);
+  --border-light: rgba(255, 255, 255, 0.06);
+  --border-focus: rgba(64, 156, 255, 0.7);
+  --hairline: rgba(255, 255, 255, 0.10);
 
-    --accent: #409cff;
-    --accent-hover: #5aabff;
-    --accent-subtle: rgba(64, 156, 255, 0.18);
-    --accent-glow: rgba(64, 156, 255, 0.40);
+  --text-primary: #f1f3f8;
+  --text-secondary: #b6bcca;
+  --text-tertiary: #7c8395;
+  --text-inverse: #ffffff;
 
-    --green: #34d27a;
-    --green-bg: rgba(52, 210, 122, 0.16);
-    --green-glow: rgba(52, 210, 122, 0.40);
+  --accent: #409cff;
+  --accent-hover: #5aabff;
+  --accent-subtle: rgba(64, 156, 255, 0.18);
+  --accent-glow: rgba(64, 156, 255, 0.40);
 
-    --red: #ff6b71;
-    --red-bg: rgba(255, 107, 113, 0.16);
+  --green: #34d27a;
+  --green-bg: rgba(52, 210, 122, 0.16);
+  --green-glow: rgba(52, 210, 122, 0.40);
 
-    --amber: #ffb245;
-    --amber-bg: rgba(255, 178, 69, 0.16);
+  --red: #ff6b71;
+  --red-bg: rgba(255, 107, 113, 0.16);
 
-    --teal: #3ad6ea;
-    --teal-bg: rgba(58, 214, 234, 0.16);
+  --amber: #ffb245;
+  --amber-bg: rgba(255, 178, 69, 0.16);
 
-    --gradient-brand: linear-gradient(135deg, #ffffff 0%, #aeb6c6 100%);
-    --gradient-accent: linear-gradient(135deg, #5aabff 0%, #409cff 50%, #2f7ff0 100%);
-    --gradient-surface: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 60%);
+  --teal: #3ad6ea;
+  --teal-bg: rgba(58, 214, 234, 0.16);
 
-    --elev-glass:
-      inset 0 1px 0 0 var(--glass-highlight),
-      inset 0 0 0 1px var(--glass-rim),
-      inset 0 -16px 30px -22px rgba(255, 255, 255, 0.10),
-      0 22px 60px -14px rgba(0, 0, 0, 0.62),
-      0 4px 14px -4px rgba(0, 0, 0, 0.5);
-    --elev-glass-sm:
-      inset 0 1px 0 0 var(--glass-highlight),
-      inset 0 0 0 1px var(--glass-rim),
-      0 6px 18px -6px rgba(0, 0, 0, 0.55);
-    --elev-float:
-      inset 0 1px 0 0 var(--glass-highlight),
-      inset 0 0 0 1px var(--glass-rim),
-      0 34px 90px -18px rgba(0, 0, 0, 0.78),
-      0 8px 24px -6px rgba(0, 0, 0, 0.6);
+  --gradient-brand: linear-gradient(135deg, #ffffff 0%, #aeb6c6 100%);
+  --gradient-accent: linear-gradient(135deg, #5aabff 0%, #409cff 50%, #2f7ff0 100%);
+  --gradient-surface: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 60%);
 
-    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
-    --shadow-md: 0 8px 22px rgba(0, 0, 0, 0.45);
-    --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.6);
-    --shadow-glow: 0 0 26px rgba(64, 156, 255, 0.25);
-  }
+  --elev-glass:
+    inset 0 1px 0 0 var(--glass-highlight),
+    inset 0 0 0 1px var(--glass-rim),
+    inset 0 -16px 30px -22px rgba(255, 255, 255, 0.10),
+    0 22px 60px -14px rgba(0, 0, 0, 0.62),
+    0 4px 14px -4px rgba(0, 0, 0, 0.5);
+  --elev-glass-sm:
+    inset 0 1px 0 0 var(--glass-highlight),
+    inset 0 0 0 1px var(--glass-rim),
+    0 6px 18px -6px rgba(0, 0, 0, 0.55);
+  --elev-float:
+    inset 0 1px 0 0 var(--glass-highlight),
+    inset 0 0 0 1px var(--glass-rim),
+    0 34px 90px -18px rgba(0, 0, 0, 0.78),
+    0 8px 24px -6px rgba(0, 0, 0, 0.6);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 22px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 26px rgba(64, 156, 255, 0.25);
 }
 
 /* ═══════════════════ Reset ═══════════════════ */
@@ -2033,6 +2038,67 @@ button:focus:not(:focus-visible) { outline: none; }
   background: var(--gradient-accent);
   color: #fff;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 8px var(--accent-glow);
+}
+
+/* ─── Appearance: theme picker + opacity sliders (About modal) ─── */
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  box-shadow: inset 0 0 0 1px var(--border-light);
+}
+
+.slider-row .slider-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg-active);
+  border-radius: var(--radius-full);
+  box-shadow: inset 0 0 0 1px var(--border-light);
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+.slider-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  background: var(--gradient-accent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 2px 8px var(--accent-glow);
+  cursor: pointer;
+}
+
+.slider-row .slider-value {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 38px;
+  text-align: right;
 }
 
 /* ═══════════════════ Liquid-glass finishing touches ═══════════════════ */

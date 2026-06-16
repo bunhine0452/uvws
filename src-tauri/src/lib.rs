@@ -397,6 +397,38 @@ async fn install_uv() -> Result<String, String> {
     }
 }
 
+/// 창 전체의 불투명도(0.3~1.0)를 OS 네이티브 API로 설정한다.
+/// `transparent: true` 없이 동작하므로 1.0(기본)일 땐 기존과 완전히 동일하고,
+/// 낮추면 창 전체(텍스트 포함)가 바탕화면 위로 서서히 비쳐 보인다.
+/// macOS: NSWindow.alphaValue · Linux: GTK opacity.
+/// Windows는 WebView2 호스팅 창에서 레이어드 윈도우 알파가 안정적으로 먹지 않아
+/// (콘텐츠 미반영/검은 렌더) 지원하지 않는다 — no-op.
+#[tauri::command]
+fn set_window_opacity(window: tauri::Window, opacity: f64) -> Result<(), String> {
+    let o = opacity.clamp(0.2, 1.0);
+
+    #[cfg(target_os = "macos")]
+    {
+        use objc2::{msg_send, runtime::AnyObject};
+        let ns_window = window.ns_window().map_err(|e| e.to_string())? as *mut AnyObject;
+        unsafe {
+            let _: () = msg_send![&*ns_window, setAlphaValue: o];
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        use gtk::prelude::WidgetExt;
+        let gtk_window = window.gtk_window().map_err(|e| e.to_string())?;
+        gtk_window.set_opacity(o);
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    let _ = (o, &window); // 미지원 플랫폼(Windows 등): unused 경고 방지용 no-op
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let process_registry = Arc::new(runner::ProcessRegistry::default());
@@ -454,6 +486,7 @@ pub fn run() {
             upgrade_all,
             check_uv,
             install_uv,
+            set_window_opacity,
             runner::start_project,
             runner::stop_project,
             runner::sync_project_dependencies,

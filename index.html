@@ -11,10 +11,21 @@
     <style>
       :root { color-scheme: light dark; }
       html, body { margin: 0; background: #e7ebf3; }
-      @media (prefers-color-scheme: dark) {
-        html, body { background: #070810; }
-      }
+      html[data-theme="dark"], html[data-theme="dark"] body { background: #070810; }
     </style>
+    <script>
+      /* Resolve the saved theme + glass strength before first paint (no flash). */
+      (function () {
+        try {
+          var pref = localStorage.getItem("uvws.theme") || "system";
+          var dark = pref === "dark" ||
+            (pref === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.dataset.theme = dark ? "dark" : "light";
+          var gs = localStorage.getItem("uvws.glassStrength");
+          if (gs) document.documentElement.style.setProperty("--glass-strength", gs);
+        } catch (e) { /* ignore */ }
+      })();
+    </script>
   </head>
 
   <body>

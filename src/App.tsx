@@ -12,7 +12,8 @@ import {
   Globe, Copy, Square, Play, Clock, Box, FileCode, Settings, Wrench,
   PackageSearch, FolderOpen, X, RefreshCw, DownloadCloud, FileText, Zap,
   GitBranch, ArrowUp, ArrowDown, Download, Upload, Languages, History,
-  RotateCw, ExternalLink, PanelLeftClose, PanelLeftOpen, Share2, Cpu, MemoryStick
+  RotateCw, ExternalLink, PanelLeftClose, PanelLeftOpen, Share2, Cpu, MemoryStick,
+  Palette, Eye, Layers
 } from "lucide-react";
 import TerminalView from "./components/TerminalView";
 import { useI18n } from "./i18n";
@@ -54,6 +55,10 @@ const ICON_COLORS = [
   "#343a40", "#495057", "#868e96", "#ced4da",
   "#d0b8ac", "#a3b18a", "#9a8c98", "#c9ada7",
 ];
+
+// 외관 설정: 테마(시스템/라이트/다크) + 창 투명도 + UI 글래스 강도. localStorage에 영속화.
+type ThemeChoice = "system" | "light" | "dark";
+const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
 
 
 
@@ -153,7 +158,7 @@ export default function App() {
 
   // New States for About & Smart Import
   const [showAbout, setShowAbout] = useState(false);
-  const [appVersion, setAppVersion] = useState("0.5.1");
+  const [appVersion, setAppVersion] = useState("0.6.0");
   const [setupModalConfig, setSetupModalConfig] = useState<{project: Project, hasReqs: boolean} | null>(null);
   const [setupPythonVer, setSetupPythonVer] = useState("3.12");
   const [setupInstallReqs, setSetupInstallReqs] = useState(true);
@@ -213,6 +218,46 @@ export default function App() {
   useEffect(() => { notifyEnabledRef.current = notifyEnabled; localStorage.setItem("uvws.notify", notifyEnabled ? "1" : "0"); }, [notifyEnabled]);
   useEffect(() => { projectsRef.current = projects; }, [projects]);
   useEffect(() => { tRef.current = t; }, [t]);
+
+  // ─── 외관(테마/투명도) 설정 ───
+  const [theme, setTheme] = useState<ThemeChoice>(
+    () => (localStorage.getItem("uvws.theme") as ThemeChoice) || "system"
+  );
+  // 창 전체 투명도 (네이티브 알파). 0.3~1.0, 1=불투명(기본).
+  const [windowOpacity, setWindowOpacity] = useState<number>(
+    () => clamp(parseFloat(localStorage.getItem("uvws.windowOpacity") || "1") || 1, 0.3, 1)
+  );
+  // UI 글래스 강도 (반투명 패널의 진하기). 0.3~1.5, 1=기본.
+  const [glassStrength, setGlassStrength] = useState<number>(
+    () => clamp(parseFloat(localStorage.getItem("uvws.glassStrength") || "1") || 1, 0.3, 1.5)
+  );
+
+  // 테마 선택 → <html data-theme>. "시스템"이면 OS 변경을 실시간 추종.
+  useEffect(() => {
+    localStorage.setItem("uvws.theme", theme);
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const dark = theme === "dark" || (theme === "system" && mq.matches);
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+    };
+    apply();
+    if (theme === "system") {
+      mq.addEventListener("change", apply);
+      return () => mq.removeEventListener("change", apply);
+    }
+  }, [theme]);
+
+  // 글래스 강도 → CSS 변수.
+  useEffect(() => {
+    document.documentElement.style.setProperty("--glass-strength", String(glassStrength));
+    localStorage.setItem("uvws.glassStrength", String(glassStrength));
+  }, [glassStrength]);
+
+  // 창 투명도 → 네이티브 명령(마운트 시 저장값도 적용).
+  useEffect(() => {
+    localStorage.setItem("uvws.windowOpacity", String(windowOpacity));
+    invoke("set_window_opacity", { opacity: windowOpacity }).catch(() => { /* 미지원 플랫폼 무시 */ });
+  }, [windowOpacity]);
 
   // 알림 권한 요청(최초 1회)
   useEffect(() => { (async () => {
@@ -1637,6 +1682,37 @@ export default function App() {
               <div className="lang-toggle-buttons">
                 <button className={lang === "ko" ? "active" : ""} onClick={() => setLang("ko")}>한국어</button>
                 <button className={lang === "en" ? "active" : ""} onClick={() => setLang("en")}>English</button>
+              </div>
+            </div>
+
+            <div className="settings-section" style={{ marginTop: 12 }}>
+              <div className="lang-toggle">
+                <span className="lang-toggle-label"><Palette size={13} /> {t("settings_theme")}</span>
+                <div className="lang-toggle-buttons">
+                  <button className={theme === "system" ? "active" : ""} onClick={() => setTheme("system")}>{t("theme_system")}</button>
+                  <button className={theme === "light" ? "active" : ""} onClick={() => setTheme("light")}>{t("theme_light")}</button>
+                  <button className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")}>{t("theme_dark")}</button>
+                </div>
+              </div>
+
+              <div className="slider-row">
+                <span className="slider-label"><Eye size={13} /> {t("settings_window_opacity")}</span>
+                <input
+                  type="range" min={30} max={100} step={5}
+                  value={Math.round(windowOpacity * 100)}
+                  onChange={(e) => setWindowOpacity(parseInt(e.target.value) / 100)}
+                />
+                <span className="slider-value">{Math.round(windowOpacity * 100)}%</span>
+              </div>
+
+              <div className="slider-row">
+                <span className="slider-label"><Layers size={13} /> {t("settings_glass_strength")}</span>
+                <input
+                  type="range" min={30} max={150} step={5}
+                  value={Math.round(glassStrength * 100)}
+                  onChange={(e) => setGlassStrength(parseInt(e.target.value) / 100)}
+                />
+                <span className="slider-value">{Math.round(glassStrength * 100)}%</span>
               </div>
             </div>
 

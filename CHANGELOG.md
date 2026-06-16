@@ -4,6 +4,16 @@ All notable changes per release. The CI injects the section matching the
 release tag (e.g. `## v0.4.0`) into the GitHub release notes and the
 in-app updater notes, so keep headings as `## vX.Y.Z`.
 
+## v0.6.0
+- **Theme picker** — choose **System / Light / Dark** in Settings (click the
+  uvws logo, top-left). Previously the app only followed your OS appearance;
+  now you can pin it. "System" still tracks OS changes live.
+- **Window transparency** — a new slider makes the whole app window translucent
+  so your desktop shows through (macOS & Linux). At 100% it looks exactly as
+  before; drag it down for a see-through window.
+- **UI glass strength** — a second slider tunes how translucent the in-app
+  glass panels are, independent of the window transparency.
+
 ## v0.5.1
 - **Fixed "Open Folder"** — the button failed with "Not allowed to open path"
   because the opener path scope was empty. It now opens any project folder in
