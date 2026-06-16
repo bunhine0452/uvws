@@ -4,6 +4,14 @@ All notable changes per release. The CI injects the section matching the
 release tag (e.g. `## v0.4.0`) into the GitHub release notes and the
 in-app updater notes, so keep headings as `## vX.Y.Z`.
 
+## v0.7.1
+- **Bigger window-drag area** — the strip along the top of the window (and
+  sidebar) is now taller, so there's more room to grab and move the window.
+- **Removed the Python version card** added in 0.7.0 — it overlapped with the
+  existing **Python Interpreter** setting and the `.venv` it creates, which was
+  more confusing than helpful. Pin a Python version with a `.python-version`
+  file if you need one; uv still honors it.
+
 ## v0.7.0
 - **Per-project Python version** — a new **Python version** card in the Config
   tab lists the CPython versions uv knows about (installed ones flagged). Click
